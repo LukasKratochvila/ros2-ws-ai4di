@@ -1,0 +1,10 @@
+/border_checker:
+  ros__parameters:
+    filter_field: z
+    filter_limits_max: -0.2
+    filter_limits_min: -1.0
+    filter_type: passthrough
+    mean_k: 50
+    output_topic: floor
+    standard_dev_thresh: 1.0
+    use_sim_time: false
