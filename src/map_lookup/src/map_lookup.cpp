@@ -27,30 +27,39 @@
 
 class MapLookup : public rclcpp::Node
 {
-  public:
-    MapLookup()
-    : Node("map_lookup")
-    {
-      synchronised = false;
-      boxSub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
-      					(std::string)"/detections",
-      					10,
-      					std::bind(&MapLookup::bbox_callback, this, std::placeholders::_1));
-      boxPub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/unknownObstacles", 10);
-      mapPub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("/ObstacleMap", 10);
-      tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-    	transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-    	mapClient_ = this->create_client<nav_msgs::srv::GetMap>("/map_server/map");
-    	
-    	while(!mapClient_->wait_for_service(std::chrono::seconds(3))){
-    	if (!rclcpp::ok()) {
-    	   RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-    	   return;
-        }
-	RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
-        }
-    	RCLCPP_INFO(this->get_logger(), "Map lookup node has started.");
-    }
+	public:
+    	MapLookup()
+    	: Node("map_lookup")
+    	{
+	  		this->declare_parameter("input_topic", "/detections");
+			this->declare_parameter("output_boxes_topic", "/unknownObstacles");
+			this->declare_parameter("output_map_topic", "/ObstacleMap");
+			this->declare_parameter("synchronised", false);
+
+			this->declare_parameter("map_server", "/map_server/map");
+
+			this->declare_parameter("debug", false);
+
+			synchronised = this->get_parameter("synchronised").as_bool();
+			debug = this->get_parameter("debug").as_bool();
+
+			boxSub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
+						this->get_parameter("input_topic").as_string(), 10, std::bind(&MapLookup::bbox_callback, this, std::placeholders::_1));
+			boxPub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(this->get_parameter("output_boxes_topic").as_string(), 10);
+			mapPub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(this->get_parameter("output_map_topic").as_string(), 10);
+			tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+			transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+			mapClient_ = this->create_client<nav_msgs::srv::GetMap>(this->get_parameter("map_server").as_string());
+			
+			while(!mapClient_->wait_for_service(std::chrono::seconds(3))){
+				if (!rclcpp::ok()) {
+					RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+					return;
+				}
+				RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
+			}
+			RCLCPP_INFO(this->get_logger(), "Map lookup node has started.");
+		}
     void setMap(nav_msgs::msg::OccupancyGrid map){
     	if (map_ == nullptr)
     	   map_ = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
@@ -59,27 +68,26 @@ class MapLookup : public rclcpp::Node
     	map_->info=map.info;
     	map_->data=map.data;
     }
+	rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr mapClient_{nullptr};
 
   private:
     void bbox_callback(const visualization_msgs::msg::MarkerArray::SharedPtr msg)
     {
-    	double cx, cy, dx, dy;
-    	
-	//RCLCPP_INFO(this->get_logger(), "Recieved %d MarkerArray.", msg->markers.size()/2);
-	if (map_ == nullptr){
-	    RCLCPP_INFO(this->get_logger(), "No map.");
-	    return;
-	}
-	std::string fromFrameRel = msg->markers[0].header.frame_id;
-        std::string toFrameRel = "mapOrigin";
+		if (debug)
+			RCLCPP_INFO(this->get_logger(), "Recieved %d MarkerArray.", msg->markers.size()/2);
+		if (map_ == nullptr){
+			RCLCPP_INFO(this->get_logger(), "Got detections, but no map -> return.");
+			return;
+		}
+		std::string fromFrameRel = msg->markers[0].header.frame_id;
+        std::string toFrameRel = map_->header.frame_id;
         geometry_msgs::msg::TransformStamped transformStamped;
         try {
-          transformStamped = tf_buffer_->lookupTransform(
-          toFrameRel, fromFrameRel,
-          tf2::TimePointZero);
+			transformStamped = tf_buffer_->lookupTransform(
+				toFrameRel, fromFrameRel, tf2::TimePointZero);
         }
         catch (tf2::TransformException & ex) {
-          RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+			RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
         }
 
     	geometry_msgs::msg::PointStamped point_stamped;
@@ -120,6 +128,8 @@ class MapLookup : public rclcpp::Node
     	RCLCPP_ERROR(this->get_logger(), "Map readed.");*/
     	
     	visualization_msgs::msg::MarkerArray outmsg;
+		double cx, cy, dx, dy;
+		size_t cnt;
 
     	for(size_t i = 0; i < msg->markers.size(); ++(++i)){
     		cx = msg->markers[i].pose.position.x;
@@ -127,17 +137,20 @@ class MapLookup : public rclcpp::Node
     		dx = msg->markers[i].scale.x;
     		dy = msg->markers[i].scale.y;
 
-    		//size_t cnt = 0;
+    		cnt = 0;
     		PointVector.clear();
     		for(auto x = -dx/2; x <= dx/2; x += dx/4){
     			for(auto y = -dy/2; y <= dy/2; y += dy/4){
     				point_stamped.point.x = cx + x + map_->info.origin.position.x, point_stamped.point.y = cy + y + map_->info.origin.position.y;
-    				//RCLCPP_INFO(this->get_logger(), "BT Point: x = %lf, y = %lf",point_stamped.point.x, point_stamped.point.y);
+					if (debug)
+    					RCLCPP_INFO(this->get_logger(), "BT Point: x = %lf, y = %lf",point_stamped.point.x, point_stamped.point.y);
     				tf2::doTransform(point_stamped,point_stamped,transformStamped);
     				//point_stamped = tf_buffer_->transform(point_stamped, "mapOrigin"/*map_->header.frame_id*/);
-    				//RCLCPP_INFO(this->get_logger(), "AT Point: x = %lf, y = %lf",point_stamped.point.x, point_stamped.point.y);
+    				if (debug)
+						RCLCPP_INFO(this->get_logger(), "AT Point: x = %lf, y = %lf",point_stamped.point.x, point_stamped.point.y);
     				PointVector.push_back(point_stamped);
-    				//RCLCPP_INFO(this->get_logger(), "Pushing point %d [%lf, %lf, %lf]",++cnt, point_stamped.point.x, point_stamped.point.y, point_stamped.point.z);
+    				if (debug)
+						RCLCPP_INFO(this->get_logger(), "Pushing point %d [%lf, %lf, %lf]",++cnt, point_stamped.point.x, point_stamped.point.y, point_stamped.point.z);
     			}
     		}
 
@@ -147,32 +160,34 @@ class MapLookup : public rclcpp::Node
     			//map->info.resolution = VGlatRes;
 		  		//map->info.height = (maxY - minY) / VGlatRes;
 		  		//map->info.width = (maxX) / VGlatRes;
-		  		//RCLCPP_INFO(this->get_logger(), "Map Res:%lf W:%d H:%d S:%d", map_->info.resolution, map_->info.width, map_->info.height, map_->data.size());
-		  	index = (size_t)((size_t)((size_t)(point.point.y / map_->info.resolution) * map_->info.width) + (size_t)(point.point.x / map_->info.resolution));
+		  		if (debug)
+				  	RCLCPP_INFO(this->get_logger(), "Map Res:%lf W:%d H:%d S:%d", map_->info.resolution, map_->info.width, map_->info.height, map_->data.size());
+		  		index = (size_t)((size_t)((size_t)(point.point.y / map_->info.resolution) * map_->info.width) + (size_t)(point.point.x / map_->info.resolution));
     			accumulator += (int8_t)map_->data[index];
     			ObstacleMap.data[index] = 100;
-    			//ObstacleMap.data[1] = 100;
-    		//RCLCPP_INFO(this->get_logger(), "Point: x = %lf, y = %lf",point.point.x, point.point.y);
-    		//RCLCPP_INFO(this->get_logger(), "MapValue: %d, index %zu, %d, %d, %d",(int8_t)map_->data[index], index, map_->info.width, map_->info.height, map_->data.size());
+    			if (debug){
+    				RCLCPP_INFO(this->get_logger(), "Point: x = %lf, y = %lf",point.point.x, point.point.y);
+    				RCLCPP_INFO(this->get_logger(), "MapValue: %d, index %zu, %d, %d, %d",(int8_t)map_->data[index], index, map_->info.width, map_->info.height, map_->data.size());
+				}
     		}
-    		//RCLCPP_INFO(this->get_logger(), "A: %d, V:%lf", accumulator, (double)0.2 * 100 * PointVector.size());
+			if (debug)
+    			RCLCPP_INFO(this->get_logger(), "A: %d, V:%lf", accumulator, (double)0.2 * 100 * PointVector.size());
     		if(accumulator <= 0.2 * 100 * PointVector.size()){
     			outmsg.markers.push_back(msg->markers[i]);
     			outmsg.markers.push_back(msg->markers[i+1]);
     		}
-
     	}
-
     	boxPub_->publish(outmsg);
     	mapPub_->publish(ObstacleMap);
-      std::stringstream log;
-      log << "Publishing: " << outmsg.markers.size()/2 << " detections.";
-      RCLCPP_INFO(this->get_logger(), log.str());
-		  
+
+		if (debug){
+			std::stringstream log;
+    		log << "Publishing: " << outmsg.markers.size()/2 << " detections.";
+    		RCLCPP_INFO(this->get_logger(), log.str());
+		}
     }
     
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr boxSub_{nullptr};
-    rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr mapClient_{nullptr};
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr boxPub_{nullptr};
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr mapPub_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
@@ -180,7 +195,7 @@ class MapLookup : public rclcpp::Node
     std::shared_ptr<nav_msgs::msg::OccupancyGrid> map_{nullptr};
 
     bool synchronised;
-
+	bool debug;
 };
 
 
@@ -189,7 +204,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   std::shared_ptr<MapLookup> node = std::make_shared<MapLookup>();
 
-  auto client = node->create_client<nav_msgs::srv::GetMap>("/map_server/map");
+  auto client = node->mapClient_;
   auto request = std::make_shared<nav_msgs::srv::GetMap::Request>();
   
   while (!client->wait_for_service(std::chrono::seconds(5))) {
@@ -202,12 +217,11 @@ int main(int argc, char ** argv)
   rclcpp::sleep_for(std::chrono::seconds(1));
   auto result = client->async_send_request(request);
   // Wait for the result.
-  if (rclcpp::spin_until_future_complete(node, result) ==
-    rclcpp::FutureReturnCode::SUCCESS)
-  {
+  if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS){
     RCLCPP_INFO(node->get_logger(), "Map recieved.");
     node->setMap(result.get()->map);
-  } else {
+	} 
+	else {
     RCLCPP_ERROR(node->get_logger(), "Failed to call service GetMap");
     return 1;
   }

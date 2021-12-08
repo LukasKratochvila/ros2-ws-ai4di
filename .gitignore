@@ -1,0 +1,8 @@
+# colcon creation
+build/*
+log/*
+install/*
+# python temp files
+*.pyc
+# vscode env
+.vscode*

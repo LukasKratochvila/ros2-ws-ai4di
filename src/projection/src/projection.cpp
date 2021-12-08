@@ -32,22 +32,31 @@ class Projection : public rclcpp::Node
   public:
     Projection() : Node("projection")
     {
-
+      this->declare_parameter("input_topic", "/detections");
       this->declare_parameter("output_topic", "/cluster_det");
+      this->declare_parameter("output_pcl_topic", "~/pcl");
+      this->declare_parameter("output_img_topic", "~/img");
+      this->declare_parameter("output_frame", "image");
 
-      output_topic_ = this->get_parameter("output_topic").as_string();
+      this->declare_parameter("debug", false);
       
+      output_frame = this->get_parameter("output_frame").as_string();
+      debug = this->get_parameter("debug").as_bool();
+
       det_subscription_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
-      "/detections", 10, std::bind(&Projection::topic_callback, this, std::placeholders::_1));
-      publisher_ = this->create_publisher<vision_msgs::msg::Detection2DArray>(output_topic_, 10);
-      pcl_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("~/pcl", 10);
-      img_publisher_ = this->create_publisher<sensor_msgs::msg::Image>("~/img", 10);
+      this->get_parameter("input_topic").as_string(), 10, std::bind(&Projection::topic_callback, this, std::placeholders::_1));
+      publisher_ = this->create_publisher<vision_msgs::msg::Detection2DArray>(this->get_parameter("output_topic").as_string(), 10);
+      if (debug){
+        pcl_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(this->get_parameter("output_pcl_topic").as_string(), 10);
+        img_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(this->get_parameter("output_img_topic").as_string(), 10);
+      }
 
       tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
       transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
       
       std::stringstream ss;
-      //ss << std::endl << "K = " << std::endl << K  << std::endl << "DistCoefs = " << std::endl << D << std::endl;
+      if (debug)
+        ss << std::endl << "K = " << std::endl << K  << std::endl << "DistCoefs = " << std::endl << D << std::endl;
       ss << "Projection has started.";
 
       RCLCPP_INFO(this->get_logger(), ss.str());
@@ -56,24 +65,27 @@ class Projection : public rclcpp::Node
   private:
     void topic_callback(const visualization_msgs::msg::MarkerArray::ConstSharedPtr detections) const
     {
-      std::string fromFrameRel = "cloud";
-      std::string toFrameRel = "image";
+      std::string fromFrameRel = detections->markers.at(0).header.frame_id;
+      std::string toFrameRel = output_frame;
       geometry_msgs::msg::TransformStamped transformStamped;
       try {
         transformStamped = tf_buffer_->lookupTransform(
-        toFrameRel, fromFrameRel,
-        tf2::TimePointZero);
+        toFrameRel, fromFrameRel, tf2::TimePointZero);
         //RCLCPP_INFO(get_logger(), "Transform %s to %s is: RX: %0.4f, RY: %0.4f, RZ: %0.4f TX: %0.4f, TY: %0.4f, TZ: %0.4f", toFrameRel.c_str(), fromFrameRel.c_str(), transformStamped.transform.rotation.x,transformStamped.transform.rotation.y, transformStamped.transform.rotation.z, transformStamped.transform.translation.x, transformStamped.transform.translation.y, transformStamped.transform.translation.z);
       }
       catch (tf2::TransformException & ex) {
         RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
       }
       std::stringstream ss;
-      //ss << detections->markers.size()/2;
-      //RCLCPP_INFO(get_logger(),ss.str());
+      if (debug){
+        ss << detections->markers.size()/2 << std::endl;
+        RCLCPP_INFO(get_logger(),ss.str());
+        ss.clear();
+      }
       
       //tf2::Transform trans(transformStamped.transform.rotation);
       // Transform to image frame
+      
       visualization_msgs::msg::MarkerArray trans_det = visualization_msgs::msg::MarkerArray();
       geometry_msgs::msg::PoseStamped marker_pose;
       visualization_msgs::msg::Marker marker;
@@ -86,16 +98,11 @@ class Projection : public rclcpp::Node
         marker.pose = marker_pose.pose;
         trans_det.markers.push_back(marker);
       }
-      pcl_publisher_->publish(trans_det);
+      if (debug)
+        pcl_publisher_->publish(trans_det);
       
-      cv::Mat rVec(3, 1, cv::DataType<double>::type);
-      rVec.at<double>(0) = transformStamped.transform.rotation.x;
-      rVec.at<double>(1) = transformStamped.transform.rotation.y;
-      rVec.at<double>(2) = transformStamped.transform.rotation.z;
-      cv::Mat tVec(3, 1, cv::DataType<double>::type);
-      tVec.at<double>(0) = transformStamped.transform.translation.x;
-      tVec.at<double>(1) = transformStamped.transform.translation.y;
-      tVec.at<double>(2) = transformStamped.transform.translation.z;
+      cv::Mat rVec = (cv::Mat_<double>(3,1) << 0, 0, 0);
+      cv::Mat tVec = (cv::Mat_<double>(3,1) << 0, 0, 0);
 
       std::vector<cv::Point3d> objectPoints;
       std::vector<cv::String> objectStrings;
@@ -114,26 +121,28 @@ class Projection : public rclcpp::Node
       std::vector<cv::Point2d> projectedPoints;
       cv::projectPoints(objectPoints, rVec, tVec, K, D, projectedPoints);
 
-      cv::Mat img = cv::imread("/home/kratochvila/Desktop/Data/tovarna/mereni210916_3/image/frame000001.jpg");
-      for(size_t i = 0; i < objectStrings.size(); i++){
-        cv::circle(img, cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), 5, CV_RGB(255,0,0));
-        cv::putText(img, objectStrings.at(i),cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0,255,0));
-        cv::rectangle(img, cv::Rect2d(cv::Point2d(projectedPoints.at(3*i+1).x,projectedPoints.at(3*i+1).y),cv::Point2d(projectedPoints.at(3*i+2).x,projectedPoints.at(3*i+2).y)),CV_RGB(0,0,255));
-      }
-      //ss.clear();
-      //ss << projectedPoints;
-      //RCLCPP_INFO(get_logger(),ss.str());
-      
-      cv_bridge::CvImage out_msg;
-      out_msg.image = img;
-      out_msg.header = detections->markers.at(0).header;
-      out_msg.encoding = "bgr8";
-      out_msg.header.frame_id = "image";
+      if (debug){
+        cv::Mat img(480, 640, CV_8UC3, CV_RGB(255, 255, 255));
+        for(size_t i = 0; i < objectStrings.size(); i++){
+          cv::circle(img, cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), 5, CV_RGB(255,0,0));
+          cv::putText(img, objectStrings.at(i),cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0,255,0));
+          cv::rectangle(img, cv::Rect2d(cv::Point2d(projectedPoints.at(3*i+1).x,projectedPoints.at(3*i+1).y),cv::Point2d(projectedPoints.at(3*i+2).x,projectedPoints.at(3*i+2).y)),CV_RGB(0,0,255));
+        }
+        ss << projectedPoints;
+        RCLCPP_INFO(get_logger(),ss.str());
+        ss.clear();
 
-      img_publisher_->publish(*out_msg.toImageMsg());
+        cv_bridge::CvImage out_msg;
+        out_msg.image = img;
+        out_msg.header = trans_det.markers.at(0).header;
+        out_msg.encoding = "bgr8";
+        out_msg.header.frame_id = output_frame;
+
+        img_publisher_->publish(*out_msg.toImageMsg());
+      }
 
       vision_msgs::msg::Detection2DArray::UniquePtr detect(new vision_msgs::msg::Detection2DArray);
-      detect->header=out_msg.header;
+      detect->header=trans_det.markers.at(0).header;
       detect->detections.reserve(objectStrings.size());
       for (size_t i = 0; i < objectStrings.size(); ++i) {
         detect->detections.emplace_back();
@@ -170,12 +179,13 @@ class Projection : public rclcpp::Node
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr img_publisher_{nullptr}; 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pcl_publisher_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_{nullptr};
 
     cv::Mat K = (cv::Mat_<double>(3,3) << 531.7944, 0, 296.3159, 0, 530.179, 255.4285, 0, 0, 1);
     cv::Mat D = (cv::Mat_<double>(5,1) << -0.4512, 0.7176, -0.0014, 0.0017, -1.2896); // (k1,k2,p1,p2[,k3[,k4,k5,k6[,s1,s2,s3,s4[,τx,τy]]]])
 
-    std::string output_topic_;
+    std::string output_frame;
+    bool debug;
 };
 
 int main(int argc, char * argv[])

@@ -8,8 +8,9 @@
 import rclpy # Python Client Library for ROS 2
 from rclpy.node import Node # Handles the creation of nodes
 from sensor_msgs.msg import Image # Image is the message type
-from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
 import cv2 # OpenCV library
+from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
+
  
 class ImagePublisher(Node):
   """
@@ -53,7 +54,7 @@ class ImagePublisher(Node):
       # Publish the image.
       # The 'cv2_to_imgmsg' method converts an OpenCV
       # image to a ROS 2 image message
-      msg = self.br.cv2_to_imgmsg(frame)
+      msg = self.br.cv2_to_imgmsg(frame,"bgr8")
       msg.header.frame_id = "camera"
       self.publisher_.publish(msg)
  

@@ -7,36 +7,59 @@ import cv2
 import numpy as np
 import os
 
-class MinimalPublisher(Node):
+class ImgPublisher(Node):
       def __init__(self):
-         super().__init__('minimal_publisher')
-         self.publisher_ = self.create_publisher(Image, 'image', 10)
-         timer_period = 2#1/10 # seconds
-         self.timer = self.create_timer(timer_period, self.timer_callback)
-         self._counter = 0
-         self._dir = "/home/kratochvila/Desktop/mereni3/image"#"/home/kratochvila/Desktop/lidar/mereni2/image"
-         self._files = [file for file in os.listdir(self._dir) if file.split(".")[-1] == "jpg"]
-         self._files.sort()
-         #self.cv_image = cv2.imread('test.jpeg') ### an RGB image 
+         super().__init__('img_publisher')
+
+         self.declare_parameter("input_dir", "/home/kratochvila/Desktop/mereni3/image")
+         self.declare_parameter("output_topic", "/image")
+         self.declare_parameter("frame_id", "image")
+         self.declare_parameter("frequency", 2.0)
+         self.declare_parameter("start_counter", 0)
+         self.declare_parameter("file_ext", "jpg")
+         self.declare_parameter("debug", False)
+         
+         self.freq = self.get_parameter("frequency")._value
+         self.timer = self.create_timer(1/self.freq, self.timer_callback)
+         
+         self.dir = self.get_parameter("input_dir")._value
+         self.file_ext = self.get_parameter("file_ext")._value
+         self.counter = self.get_parameter("start_counter")._value
+
+         self.publisher = self.create_publisher(Image, self.get_parameter("output_topic")._value, 10)
+         self.frame_id = self.get_parameter("file_ext")._value
+
+         self.debug = self.get_parameter("debug")._value
+         
+         if not os.path.isdir(self.dir):
+            self.get_logger().error("Input dir: {} is not directory or doesn't exist!".format(self.dir))
+         else:
+            self.files = [file for file in os.listdir(self.dir) if file.split(".")[-1] == "jpg"]
+            self.files.sort()
+            if self.debug:
+               self.get_logger().info("Read directory {} with {} files.".format(self.dir, len(self.files)))
+
          self.bridge = CvBridge()
+         self.get_logger().info("Pcl_pub_py has started.")
 
       def timer_callback(self):
-          if self._counter > len(self._files)-1:
-              self._counter = 0
-          self.cv_image = cv2.imread(os.path.join(self._dir,self._files[self._counter]))
+          if self.counter > len(self.files)-1:
+            self.counter = 0
+          self.cv_image = cv2.imread(os.path.join(self.dir,self.files[self.counter]))
 
           msg = self.bridge.cv2_to_imgmsg(np.array(self.cv_image), "bgr8")
-          msg.header.frame_id = "map"
-          msg.header.stamp.sec = self._counter
-          self.publisher_.publish(msg)
-          self.get_logger().info('Publishing an image from file {}'.format(self._files[self._counter]))
-          self._counter += 1
+          msg.header.frame_id = self.frame_id
+          msg.header.stamp.sec = self.counter
+          self.publisher.publish(msg)
+          if self.debug:
+            self.get_logger().info('Publishing an image from file {}'.format(self.files[self.counter]))
+          self.counter += 1
 
 def main(args=None):
     rclpy.init(args=args)
-    minimal_publisher = MinimalPublisher()
-    rclpy.spin(minimal_publisher)
-    minimal_publisher.destroy_node()
+    img_publisher = ImgPublisher()
+    rclpy.spin(img_publisher)
+    img_publisher.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
