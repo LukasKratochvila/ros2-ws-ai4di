@@ -1,5 +1,0 @@
-int32 count_to_goal
----
-int32 result_count
----
-int32 feedback_state
