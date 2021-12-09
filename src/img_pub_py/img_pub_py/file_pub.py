@@ -27,7 +27,7 @@ class ImgPublisher(Node):
          self.counter = self.get_parameter("start_counter")._value
 
          self.publisher = self.create_publisher(Image, self.get_parameter("output_topic")._value, 10)
-         self.frame_id = self.get_parameter("file_ext")._value
+         self.frame_id = self.get_parameter("frame_id")._value
 
          self.debug = self.get_parameter("debug")._value
          

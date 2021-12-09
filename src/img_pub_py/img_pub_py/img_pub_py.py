@@ -22,16 +22,25 @@ class ImagePublisher(Node):
     """
     # Initiate the Node class's constructor and give it a name
     super().__init__('image_publisher')
+
+    self.declare_parameter("output_topic", "/image")
+    self.declare_parameter("frame_id", "image")
+    self.declare_parameter("frequency", 2.0)
+    self.declare_parameter("encoding", "bgr8")
+    self.declare_parameter("debug", False)
       
     # Create the publisher. This publisher will publish an Image
     # to the video_frames topic. The queue size is 10 messages.
-    self.publisher_ = self.create_publisher(Image, 'video_frames', 10)
+    self.publisher_ = self.create_publisher(Image, self.get_parameter("output_topic")._value, 10)
       
     # We will publish a message every 0.1 seconds
-    timer_period = 1/30  # seconds
+    self.frame_id = self.get_parameter("frame_id")._value
+    self.freq = self.get_parameter("frequency")._value
+    self.encoding = self.get_parameter("encoding")._value
+    self.debug = self.get_parameter("debug")._value
       
     # Create the timer
-    self.timer = self.create_timer(timer_period, self.timer_callback)
+    self.timer = self.create_timer(1/self.freq, self.timer_callback)
          
     # Create a VideoCapture object
     # The argument '0' gets the default webcam.
@@ -39,6 +48,8 @@ class ImagePublisher(Node):
          
     # Used to convert between ROS and OpenCV images
     self.br = CvBridge()
+
+    self.get_logger().info("Image_publisher has started.")
    
   def timer_callback(self):
     """
@@ -54,12 +65,13 @@ class ImagePublisher(Node):
       # Publish the image.
       # The 'cv2_to_imgmsg' method converts an OpenCV
       # image to a ROS 2 image message
-      msg = self.br.cv2_to_imgmsg(frame,"bgr8")
-      msg.header.frame_id = "camera"
+      msg = self.br.cv2_to_imgmsg(frame,self.encoding)
+      msg.header.frame_id = self.frame_id
       self.publisher_.publish(msg)
  
     # Display the message on the console
-    self.get_logger().info('Publishing video frame')
+    if self.debug:
+      self.get_logger().info('Publishing video frame')
   
 def main(args=None):
   
