@@ -40,8 +40,9 @@ def generate_launch_description():
         arguments=['28.5','-18','0','{}'.format(0/180*3.14),'0','0','map','mapOrigin'])
 
     cam_grabber = Node(
-        package='image_tools_custom',
+        package='image_tools',
         executable='cam2image',
+        name='cam_image',
         parameters=[configured_params],
         remappings=remappings)
     livox_grabber = Node(
@@ -157,12 +158,12 @@ def generate_launch_description():
     #ld.add_action(pcl_tf)
     #ld.add_action(o_tf)
 
-    #ld.add_action(cam_grabber)
+    ld.add_action(cam_grabber)
     #ld.add_action(livox_grabber)
 
     #ld.add_action(writer_py)
     #ld.add_action(writer_cpp)
-    ld.add_action(pcl_pub)
+    #ld.add_action(pcl_pub)
     #ld.add_action(pcl_pub_py)
     #ld.add_action(img_pub)
     #ld.add_action(video_pub)

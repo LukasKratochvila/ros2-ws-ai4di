@@ -5,7 +5,7 @@ cam_image:
     reliability: 'reliable' # Reliability QoS setting. Either 'reliable' (default) or 'best_effort'
     history: 'keep_last'    # History QoS setting. Either 'keep_last' (default) or 'keep_all'. If 'keep_last', then up to N samples are stored where N is the depth
     depth: 10               # Depth of the publisher queue. Only honored if history QoS is 'keep_last'. Default value is 10
-    frequency: 30           # Publish frequency in Hz. Default value is 30
+    frequency: 30.0         # Publish frequency in Hz. Default value is 30
     burger_mode: false      # Produce images of burgers rather than connecting to a camera
     show_camera: false      # Show camera stream. Either 'true' or 'false' (default)
     width: 640              # Width component of the camera stream resolution. Default value is 320
