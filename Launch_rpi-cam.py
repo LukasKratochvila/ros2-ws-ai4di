@@ -47,7 +47,7 @@ def generate_launch_description():
         remappings=remappings)
     livox_grabber = Node(
         package='livox_ros2_driver',
-        executable='livox_driver_node',
+        executable='livox_ros2_driver_node',
         name='livox',
         parameters=[configured_params],
         remappings=remappings)
