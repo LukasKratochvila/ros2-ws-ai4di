@@ -74,7 +74,7 @@ private:
     // ensure that every message gets received in order, or best effort, meaning that the transport
     // makes no guarantees about the order or reliability of delivery.
     qos.reliability(reliability_policy_);
-    pub_ = create_publisher<sensor_msgs::msg::Image>("images", qos);
+    pub_ = create_publisher<sensor_msgs::msg::Image>(this->output_topic_, qos);
 
     // Subscribe to a message that will toggle flipping or not flipping, and manage the state in a
     // callback
@@ -244,6 +244,7 @@ private:
     burger_mode_desc.description = "Produce images of burgers rather than connecting to a camera";
     burger_mode_ = this->declare_parameter("burger_mode", false, burger_mode_desc);
     frame_id_ = this->declare_parameter("frame_id", "camera_frame");
+    output_topic_ = this->declare_parameter("output_topic", "image");
   }
 
   /// Convert an OpenCV matrix encoding type to a string format recognized by sensor_msgs::Image.
@@ -307,6 +308,7 @@ private:
   size_t height_;
   bool burger_mode_;
   std::string frame_id_;
+  std::string output_topic_;
 
   /// If true, will cause the incoming camera image message to flip about the y-axis.
   bool is_flipped_;
