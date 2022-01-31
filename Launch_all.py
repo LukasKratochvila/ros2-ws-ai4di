@@ -50,7 +50,7 @@ def generate_launch_description():
         arguments=['28.5','-18','0','{}'.format(0/180*3.14),'0','0','map','mapOrigin'])
 
     cam_grabber = Node(
-        package='image_tools',
+        package='image_tools_custom',
         executable='cam2image',
         name='cam_image',
         parameters=[configured_params],
