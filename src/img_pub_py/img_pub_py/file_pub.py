@@ -49,7 +49,8 @@ class ImgPublisher(Node):
 
           msg = self.bridge.cv2_to_imgmsg(np.array(self.cv_image), "bgr8")
           msg.header.frame_id = self.frame_id
-          msg.header.stamp.sec = self.counter
+          msg.header.stamp = self.get_clock().now().to_msg()
+          #msg.header.stamp.sec = self.counter
           self.publisher.publish(msg)
           if self.debug:
             self.get_logger().info('Publishing an image from file {}'.format(self.files[self.counter]))

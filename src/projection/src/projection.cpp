@@ -137,6 +137,7 @@ class Projection : public rclcpp::Node
         out_msg.header = trans_det.markers.at(0).header;
         out_msg.encoding = "bgr8";
         out_msg.header.frame_id = output_frame;
+        //out_msg.header.stamp = detections->markers.at(0).header.stamp;
 
         img_publisher_->publish(*out_msg.toImageMsg());
       }

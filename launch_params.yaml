@@ -59,7 +59,7 @@ writer_cpp:
 pcl_pub_cpp_node:
   ros__parameters:
     input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
-    frequency: 2.0
+    frequency: 6.0
     output_topic: "/cloud"
     frame_id: "cloud"
     start_counter: 0
@@ -79,9 +79,9 @@ pcl_pub_cpp_node:
 img_pub_py:
   ros__parameters:
     input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/image" #"/home/kratochvila/Desktop/lidar/mereni2/image"
-    output_topic: "/image"
+    output_topic: "/detector_node/images"
     frame_id: "image"
-    frequency: 2.0
+    frequency: 30.0
     start_counter: 0
     file_ext: "jpg"
     debug: false
@@ -101,8 +101,8 @@ pcl_preprocessing_node:
     downSample: true
     debug: false
     synchronized: false
-    input_topic: "/livox/lidar"
-    output_cloud_topic: "/fiteredPcl"
+    input_topic: "/cloud"
+    output_cloud_topic: "/filteredPcl"
     output_map_topic: "/localMap"
     filter_x_min: 0.1
     filter_y_min: -10.0
@@ -149,7 +149,7 @@ map_lookup_node:
 projection:
   ros__parameters:
     input_topic: "/detections"
-    output_topic: "/cluster_det"
+    output_topic: "/detector_node/det"
     output_pcl_topic: "~/pcl"
     output_img_topic: "~/img"
     output_frame: "image"
@@ -169,15 +169,15 @@ detector_node:
 viz:
   ros__parameters:
     output_topic: '~/dbg_images'
-    input_img_topic: '/image'
-    input_det2d_topic: '/detector_node/detections'
-    time_toll: 0.01
+    input_img_topic: '/detector_node/images'
+    input_det2d_topic: '/detector_node/det'
+    time_toll: 1000 #0.01
     queue_size: 10
     start_counter: 0
     encoding: "bgr8"
     min_size_x: 50
     min_size_y: 50
-    debug: false
+    debug: true
 
 
 #map server should be configured mostly correctly, see:

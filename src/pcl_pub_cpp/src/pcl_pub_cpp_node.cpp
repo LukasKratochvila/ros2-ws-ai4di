@@ -64,6 +64,7 @@ class PclPublisher : public rclcpp::Node
       
       pcl::toROSMsg(*cloud, *msg);
       msg->header.frame_id=frame_id_;
+      msg->header.stamp=this->now();
       pclPub_->publish(*msg);
       if(debug_)
         RCLCPP_INFO(get_logger(), "Publishing a point cloud from file %s", files_.at(pcl_counter_).c_str());	    

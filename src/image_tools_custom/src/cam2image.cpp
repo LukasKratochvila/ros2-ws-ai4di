@@ -189,6 +189,8 @@ private:
       ss << std::endl;
       ss << "  frame_id\t\tID of the sensor frame. Default value is 'camera_frame'";
       ss << std::endl << std::endl;
+      ss << "  output_topic\t\tOutput topic to ros. Default value is 'image'";
+      ss << std::endl << std::endl;
       ss << "Note: try running v4l2-ctl --list-formats-ext to obtain a list of valid values.";
       ss << std::endl;
       std::cout << ss.str();
