@@ -17,6 +17,7 @@ find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(image_transport REQUIRED)
 
 include_directories(include)
 
@@ -31,7 +32,8 @@ ament_target_dependencies(imagetools
   "sensor_msgs"
   "std_msgs"
   "rclcpp_components"
-  "OpenCV")
+  "OpenCV"
+  "image_transport")
 rclcpp_components_register_node(imagetools PLUGIN "image_tools::Cam2Image" EXECUTABLE cam2image)
 rclcpp_components_register_node(imagetools PLUGIN "image_tools::ShowImage" EXECUTABLE showimage)
 

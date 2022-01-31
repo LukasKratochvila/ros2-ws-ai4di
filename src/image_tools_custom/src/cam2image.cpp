@@ -32,6 +32,8 @@
 #include "./burger.hpp"
 #include "./policy_maps.hpp"
 
+#include "image_transport/image_transport.hpp"
+
 namespace image_tools
 {
 class Cam2Image : public rclcpp::Node
@@ -74,7 +76,9 @@ private:
     // ensure that every message gets received in order, or best effort, meaning that the transport
     // makes no guarantees about the order or reliability of delivery.
     qos.reliability(reliability_policy_);
-    pub_ = create_publisher<sensor_msgs::msg::Image>(this->output_topic_, qos);
+    //pub_ = create_publisher<sensor_msgs::msg::Image>(this->output_topic_, qos);
+    
+    trans_pub_ = image_transport::create_camera_publisher(this, output_topic_);
 
     // Subscribe to a message that will toggle flipping or not flipping, and manage the state in a
     // callback
@@ -90,11 +94,12 @@ private:
     if (!burger_mode_) {
       // Initialize OpenCV video capture stream.
       // Always open device 0.
-      cap.open(0);
+      cap.open(device_id_,api_id_);
 
       // Set the width and height based on command line arguments.
       cap.set(cv::CAP_PROP_FRAME_WIDTH, static_cast<double>(width_));
       cap.set(cv::CAP_PROP_FRAME_HEIGHT, static_cast<double>(height_));
+      cap.set(cv::CAP_PROP_MODE, static_cast<double>(cap_mode_));
       if (!cap.isOpened()) {
         RCLCPP_ERROR(this->get_logger(), "Could not open video stream");
         throw std::runtime_error("Could not open video stream");
@@ -149,8 +154,15 @@ private:
     msg->header.frame_id = this->frame_id_;
 
     // Publish the image message and increment the frame_id.
-    RCLCPP_INFO(get_logger(), "Publishing image #%zd", publish_number_++);
-    pub_->publish(std::move(msg));
+    if (debug_)
+      RCLCPP_INFO(get_logger(), "Publishing image #%zd", publish_number_++);
+    //pub_->publish(*msg); //std::move(msg)
+    auto ci = std::make_unique<sensor_msgs::msg::CameraInfo>();
+    *ci = sensor_msgs::msg::CameraInfo{};
+    ci->height=msg->height;
+    ci->width=msg->width;
+    ci->header=msg->header;
+    trans_pub_.publish(std::move(msg), std::move(ci));
   }
 
   IMAGE_TOOLS_LOCAL
@@ -188,8 +200,16 @@ private:
       ss << "  height\tHeight component of the camera stream resolution. Default value is 240";
       ss << std::endl;
       ss << "  frame_id\t\tID of the sensor frame. Default value is 'camera_frame'";
-      ss << std::endl << std::endl;
-      ss << "  output_topic\t\tOutput topic to ros. Default value is 'image'";
+      ss << std::endl;
+      ss << "  output_topic\t\tOutput ROS topic. Default value is 'image'";
+      ss << std::endl;
+      ss << "  device_id\t\tID of the camera source. Default value is '0'";
+      ss << std::endl;
+      ss << "  api_id\t\tID of the opencv api. Default value is '0'";
+      ss << std::endl;
+      ss << "  cap_mode\t\tCapture mode (only for libv4l). Default value is '0'";
+      ss << std::endl;
+      ss << "  debug\t\tDebug mode. Default value is 'False'";
       ss << std::endl << std::endl;
       ss << "Note: try running v4l2-ctl --list-formats-ext to obtain a list of valid values.";
       ss << std::endl;
@@ -247,6 +267,29 @@ private:
     burger_mode_ = this->declare_parameter("burger_mode", false, burger_mode_desc);
     frame_id_ = this->declare_parameter("frame_id", "camera_frame");
     output_topic_ = this->declare_parameter("output_topic", "image");
+    device_id_ = this->declare_parameter("device_id", 0);
+    api_id_ = this->declare_parameter("api_id", 0); //cv::CAP_ANY
+    cap_mode_ = this->declare_parameter("cap_mode", 0); //only for libv4l cv::CAP_MODE_BGR
+    debug_ = this->declare_parameter("debug", false);
+    if (debug_){
+      std::stringstream ss;
+      ss << "Parameters:" << std::endl << std::endl;
+      ss << "  reliability: " << reliability_param << std::endl;
+      ss << "  history: " << history_param << std::endl;
+      ss << "  depth: " << depth_ << std::endl;
+      ss << "  frequency: " << freq_ << std::endl;
+      ss << "  burger_mode: " << burger_mode_ << std::endl;
+      ss << "  show_camera: " << show_camera_ << std::endl;
+      ss << "  width: " << width_ << std::endl;
+      ss << "  height: " << height_ << std::endl;
+      ss << "  frame_id: " << frame_id_ << std::endl;
+      ss << "  output_topic: " << output_topic_ << std::endl;
+      ss << "  device_id: " << device_id_ << std::endl;
+      ss << "  api_id: " << api_id_ << std::endl;
+      ss << "  cap_mode: " << cap_mode_ << std::endl;
+      ss << "  debug: " << debug_ << std::endl;
+      RCLCPP_INFO(get_logger(), ss.str());
+    }
   }
 
   /// Convert an OpenCV matrix encoding type to a string format recognized by sensor_msgs::Image.
@@ -297,8 +340,10 @@ private:
   burger::Burger burger_cap;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_;
+  //rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  
+  image_transport::CameraPublisher trans_pub_;
 
   // ROS parameters
   bool show_camera_;
@@ -311,6 +356,10 @@ private:
   bool burger_mode_;
   std::string frame_id_;
   std::string output_topic_;
+  int device_id_;
+  int api_id_;
+  int cap_mode_;
+  bool debug_;
 
   /// If true, will cause the incoming camera image message to flip about the y-axis.
   bool is_flipped_;
