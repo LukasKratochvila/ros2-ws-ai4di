@@ -4,6 +4,8 @@
 #include <fstream>
 #include <opencv2/highgui/highgui.hpp>
 
+#include <fcntl.h>
+
 #include "rclcpp/rclcpp.hpp"
 #include "pcl_conversions/pcl_conversions.h"
 #include "cv_bridge/cv_bridge.h"
@@ -80,8 +82,15 @@ class ImagePclSaver : public rclcpp::Node
 		    }
 	    else 
           RCLCPP_WARN(get_logger(), "FAILED in saving: " + pathStream.str());
-		  ++img_counter;
+		++img_counter;
+        int fd = open(pathStream.str().c_str(), O_RDONLY);
+        fsync(fd);
+        close(fd);
+        fd = open((this->savepath + this->img_dir + "timestamps.csv").c_str(), O_RDONLY);
+        fsync(fd);
+        close(fd);
     }
+    
     
     void lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg){
       std::stringstream pathStream;
@@ -94,7 +103,14 @@ class ImagePclSaver : public rclcpp::Node
 	    else
 	  	  RCLCPP_WARN(get_logger(), "FAILED in saving: " + pathStream.str());
 	    ++pcl_counter;
+	    int fd = open(pathStream.str().c_str(), O_RDONLY);
+        fsync(fd);
+        close(fd);
+        fd = open((this->savepath + this->pcl_dir + "timestamps.csv").c_str(), O_RDONLY);
+        fsync(fd);
+        close(fd);
     }
+    
     
     
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr imgSub_;
