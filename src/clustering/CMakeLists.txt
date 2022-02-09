@@ -21,8 +21,8 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED)
-
 find_package(visualization_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -45,7 +45,8 @@ ament_target_dependencies(${PROJECT_NAME}
 	rclcpp 
 	sensor_msgs
 	pcl_conversions
-  visualization_msgs)
+        visualization_msgs
+        vision_msgs)
 
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})

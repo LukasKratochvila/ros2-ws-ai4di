@@ -25,28 +25,33 @@
 
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <vision_msgs/msg/detection3_d.hpp>
+#include <vision_msgs/msg/detection3_d_array.hpp>
 
 class Clustering : public rclcpp::Node
 {
   public:
     Clustering() : Node("Clustering")
     {
-			this->declare_parameter("input_topic", "/filteredPcl");
-			this->declare_parameter("output_topic", "/detections");
-      this->declare_parameter("debug", false);
-
+      this->declare_parameter("input_topic", "/filteredPcl");
+      this->declare_parameter("output_topic", "/detections_det");
+      this->declare_parameter("output_topic_vizualization", "/detections");
       this->declare_parameter("cluster_tolerance", 0.2);
       this->declare_parameter("min_cluster_size", 20);
       this->declare_parameter("max_cluster_size", 10000);
-
+      this->declare_parameter("debug", false);
+      
+      input_topic = this->get_parameter("input_topic").as_string();
+      output_topic = this->get_parameter("output_topic").as_string();
+      output_topic_vizualization = this->get_parameter("output_topic_vizualization").as_string();
       cluster_tolerance = this->get_parameter("cluster_tolerance").as_double();
       min_cluster_size = this->get_parameter("min_cluster_size").as_int();
       max_cluster_size = this->get_parameter("max_cluster_size").as_int();
-
       debug = this->get_parameter("debug").as_bool();
-      subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      this->get_parameter("input_topic").as_string(), 10, std::bind(&Clustering::topic_callback, this, std::placeholders::_1));
-      marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(this->get_parameter("output_topic").as_string(), 10);
+      
+      subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(input_topic, 10, std::bind(&Clustering::topic_callback, this, std::placeholders::_1));
+      marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(output_topic_vizualization, 10);
+      detections_publisher_ = this->create_publisher<vision_msgs::msg::Detection3DArray>(output_topic, 10);
 
       RCLCPP_INFO(this->get_logger(), "Clustering node has started.");
     }
@@ -107,6 +112,7 @@ class Clustering : public rclcpp::Node
       }
 
       visualization_msgs::msg::MarkerArray output;
+      vision_msgs::msg::Detection3DArray output_det;
 
       //auto timestamp = builtin_interfaces::msg::Time();
       //auto frame = msg->header.frame_id;
@@ -181,8 +187,30 @@ class Clustering : public rclcpp::Node
         text.color.b = 0.7;
 
         output.markers.push_back(text);
+        
+        vision_msgs::msg::Detection3D det;
+        //det.header.frame_id = frame;
+        //det.header.stamp = timestamp;
+        det.header = msg->header;
+        det.tracking_id = std::to_string(cnt/2);
+
+        det.bbox.center.position.x = cx;
+        det.bbox.center.position.y = cy;
+        det.bbox.center.position.z = cz;
+
+        det.bbox.center.orientation.x = 0.0;
+        det.bbox.center.orientation.y = 0.0;
+        det.bbox.center.orientation.z = 0.0;
+        det.bbox.center.orientation.w = 1.0;
+
+        det.bbox.size.x = dx;
+        det.bbox.size.y = dy;
+        det.bbox.size.z = dz;
+
+        output_det.detections.push_back(det);
       }
       marker_publisher_->publish(output);
+      detections_publisher_->publish(output_det);
 
       if (debug){
         log << "Publishing: " << min_list.size() << " detections.";
@@ -192,9 +220,10 @@ class Clustering : public rclcpp::Node
     }
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_{nullptr};
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_{nullptr};
-
+    rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr detections_publisher_{nullptr};
+    
+    std::string input_topic, output_topic, output_topic_vizualization;
     double cluster_tolerance, min_cluster_size, max_cluster_size;
-
     bool debug;
 };
 
