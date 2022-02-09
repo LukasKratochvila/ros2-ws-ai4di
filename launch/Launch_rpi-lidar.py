@@ -6,7 +6,8 @@ from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
-    params_file = "launch_params.yaml"    
+    workspace_dir = os.path.join(os.path.dirname(__file__),os.pardir)
+    params_file = os.path.join(workspace_dir,"params/launch_params.yaml")    
     param_substitutions = {}
     
     configured_params = RewrittenYaml(
@@ -151,9 +152,9 @@ def generate_launch_description():
 
     ld = LaunchDescription()
     
-    #ld.add_action(map_tf)
+    ld.add_action(map_tf)#
     #ld.add_action(base_tf)
-    #ld.add_action(top_tf)
+    ld.add_action(top_tf)#
     ld.add_action(cam_tf)
     ld.add_action(pcl_tf)
     ld.add_action(o_tf)

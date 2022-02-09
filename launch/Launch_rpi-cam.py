@@ -1,23 +1,14 @@
 #from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
 #import os
 
 
 def generate_launch_description():
-    params_file = "launch_params.yaml"
-    
-    declare_debug_cmd = DeclareLaunchArgument(
-        'debug',
-        default_value='False',
-        description='Debugging')
-    
-    debug = LaunchConfiguration('debug')
-        
-    param_substitutions = {"debug": debug}
+    workspace_dir = os.path.join(os.path.dirname(__file__),os.pardir)
+    params_file = os.path.join(workspace_dir,"params/launch_params.yaml")   
+    param_substitutions = {}
     
     configured_params = RewrittenYaml(
         source_file=params_file,
@@ -50,7 +41,7 @@ def generate_launch_description():
         arguments=['28.5','-18','0','{}'.format(0/180*3.14),'0','0','map','mapOrigin'])
 
     cam_grabber = Node(
-        package='image_tools_custom',
+        package='image_tools',
         executable='cam2image',
         name='cam_image',
         parameters=[configured_params],
@@ -102,7 +93,6 @@ def generate_launch_description():
     preprocessing = Node(
         package='pcl_preprocessing',
         executable='pcl_preprocessing_node',
-        name='pcl_preprocessing_node',
         parameters=[configured_params],
         remappings=remappings)
     cluster = Node(
@@ -124,7 +114,6 @@ def generate_launch_description():
     project = Node(
         package='projection',
         executable='projection',
-        name="projection",
         parameters=[configured_params],
         remappings=remappings)
     yolo = Node(
@@ -163,33 +152,31 @@ def generate_launch_description():
 
     ld = LaunchDescription()
     
-    ld.add_action(declare_debug_cmd)
-    
-    ld.add_action(map_tf)
+    #ld.add_action(map_tf)
     #ld.add_action(base_tf)
-    ld.add_action(top_tf)
-    ld.add_action(cam_tf)
-    ld.add_action(pcl_tf)
-    ld.add_action(o_tf)
+    #ld.add_action(top_tf)
+    #ld.add_action(cam_tf)
+    #ld.add_action(pcl_tf)
+    #ld.add_action(o_tf)
 
-    #ld.add_action(cam_grabber)
+    ld.add_action(cam_grabber)
     #ld.add_action(livox_grabber)
 
     #ld.add_action(writer_py)
     #ld.add_action(writer_cpp)
-    ld.add_action(pcl_pub)
+    #ld.add_action(pcl_pub)
     #ld.add_action(pcl_pub_py)
-    ld.add_action(img_pub)
+    #ld.add_action(img_pub)
     #ld.add_action(video_pub)
 
-    ld.add_action(preprocessing)
-    ld.add_action(cluster)
+    #ld.add_action(preprocessing)
+    #ld.add_action(cluster)
     #ld.add_action(border_checker)
-    #ld.add_action(map_lookup)
+    ld.add_action(map_lookup)
     ld.add_action(project)
     #ld.add_action(yolo)
 
-    ld.add_action(viz)
+    #ld.add_action(viz)
     
     #ld.add_action(map_server)
     #ld.add_action(map_lifecycle_manager_cmd)

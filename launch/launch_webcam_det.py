@@ -5,9 +5,10 @@ from launch_ros.actions import Node
 import launch
 
 # load config for rviz2
-cur_path = os.path.split(os.path.realpath(__file__))[0] + '/'
-rviz_config_path = os.path.join(cur_path, 'webcam.rviz')
-
+# cur_path = os.path.split(os.path.realpath(__file__))[0] + '/'
+# rviz_config_path = os.path.join(cur_path, '../params/webcam.rviz')
+workspace_dir = os.path.join(os.path.dirname(__file__),os.pardir)
+rviz_config_path = os.path.join(workspace_dir,"params/webcam.rviz")
 
 def generate_launch_description():
     webcam_grabber = Node(

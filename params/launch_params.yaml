@@ -114,6 +114,16 @@ pcl_preprocessing_node:
     voxel_grid_y_res: 0.025
     voxel_grid_z_res: 0.025
     map_frame: "map"
+    
+detection_matcher:
+  ros__parameters:
+    Project2D_topic: "/cluster_det"
+    Detect2D_topic: "/detector_node/detections"
+    Detect3D_topic: "/detections"
+    Output3D_topic: "/matched_detections"
+    sync_policy: 1000
+    tresh: 0.5
+    debug: true
 
 clustering:
   ros__parameters:
