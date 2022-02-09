@@ -122,6 +122,12 @@ def generate_launch_description():
         name = 'detector_node',
         parameters=[configured_params],
         remappings=remappings)
+    detection_matcher = Node(
+        package='detection_matcher_py',
+        executable='detection_matcher_node',
+        name="detection_matcher",
+        parameters=[configured_params],
+        remappings=remappings)
 
     viz = Node(
         package='detection_visualizer',
@@ -175,6 +181,7 @@ def generate_launch_description():
     #ld.add_action(map_lookup)
     #ld.add_action(project)
     #ld.add_action(yolo)
+    ld.add_action(detection_matcher)
 
     #ld.add_action(viz)
     
