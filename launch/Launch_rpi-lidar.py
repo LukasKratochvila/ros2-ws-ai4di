@@ -2,7 +2,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
-#import os
+import os
 
 
 def generate_launch_description():
