@@ -8,4 +8,4 @@ ptpd -i eth0 -M #& --foreground
 sleep 12
 cd /home/ros/ros2-ws-ai4di/
 echo "Launching rpi-lidar"
-ros2 launch Launch_rpi-lidar.py
+ros2 launch launch/Launch_rpi-lidar.py
