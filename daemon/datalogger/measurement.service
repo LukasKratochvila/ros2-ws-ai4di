@@ -1,0 +1,23 @@
+[Unit]
+
+Description = Measurement service MVG-MTDS
+
+[Service]
+
+User = root
+
+WorkingDirectory = /home/ros/
+
+ExecStart = /home/ros/Desktop/startup.sh
+
+Type = simple
+
+TimeoutStopSec = 10
+
+Restart = on-failure
+
+RestartSec = 5
+
+[Install]
+
+WantedBy = multi-user.target

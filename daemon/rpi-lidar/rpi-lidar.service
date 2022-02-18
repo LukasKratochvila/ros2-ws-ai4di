@@ -1,25 +1,14 @@
 [Unit]
-
-Description = Measurement service MVG-MTDS
-
+Description = AI4DI experiment rpi-lidar
+After = network-online.target
+Requires = network-online.target
 [Service]
-
 User = root
-
-echo "Starting Measurement Daemon"
-
 WorkingDirectory = /home/ros/
-
-ExecStart = /home/ros/Desktop/startup.sh
-
+ExecStart = /home/ros/Desktop/rpi-lidar-startup.sh
 Type = simple
-
 TimeoutStopSec = 10
-
 Restart = on-failure
-
 RestartSec = 5
-
 [Install]
-
 WantedBy = multi-user.target
