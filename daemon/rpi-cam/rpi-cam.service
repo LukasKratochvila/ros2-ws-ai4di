@@ -1,11 +1,11 @@
 [Unit]
-Description = AI4DI experiment
+Description = AI4DI experiment rpi-cam
 After = network-online.target
 Requires = network-online.target
 [Service]
 User = root
 WorkingDirectory = /home/ros/
-ExecStart = /home/ros/Desktop/rpi-cam-startup.sh
+ExecStart = /home/ros/ros2-ws-ai4di/daemon/rpi-cam/rpi-cam-startup.sh
 Type = simple
 TimeoutStopSec = 10
 Restart = on-failure
