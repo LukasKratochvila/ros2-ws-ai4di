@@ -220,7 +220,7 @@ map_server:
   ros__parameters:
     log_severity: 0 #0-debug, 1-info, 2-Warn, 3-Error, 4-Fatal
     use_sim_time: true
-    yaml_filename: "/home/kratochvila/Desktop/lidar/ros2-ws-ai4di/maps/SE1_102_map_new.yaml"
+    yaml_filename: "SE1_102_map_new.yaml"
     topic_name: "map"
     frame_id: "map"
 

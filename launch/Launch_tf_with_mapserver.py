@@ -9,16 +9,23 @@ import os
 
 def generate_launch_description():
     workspace_dir = os.path.join(os.path.dirname(__file__),os.pardir)
-    params_file = os.path.join(workspace_dir,"params/launch_params.yaml")
+    params_file = os.path.join(workspace_dir,"params","launch_params.yaml")
     
     declare_debug_cmd = DeclareLaunchArgument(
         'debug',
         default_value='False',
         description='Debugging')
+        
+    declare_map_yaml_file_cmd = DeclareLaunchArgument(
+        'map',
+        default_value=os.path.join(workspace_dir, 'maps', 'SE1_102_map_new.yaml'),
+        description='Full path to the map parameters file.')
     
     debug = LaunchConfiguration('debug')
+    map_yaml_file = LaunchConfiguration('map')
         
-    param_substitutions = {"debug": debug}
+    param_substitutions = {'yaml_filename': map_yaml_file,
+                           "debug": debug}
     
     configured_params = RewrittenYaml(
         source_file=params_file,
@@ -94,6 +101,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     
     ld.add_action(declare_debug_cmd)
+    ld.add_action(declare_map_yaml_file_cmd)
     
     #ld.add_action(map_tf)
     #ld.add_action(base_tf)
