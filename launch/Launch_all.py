@@ -141,10 +141,22 @@ def generate_launch_description():
         parameters=[configured_params],
         remappings=remappings)
 
+    detection_visualizer_3d = Node(
+        package='detection_visualizer',
+        executable='det3d_viz_node',
+        name="detection_visualizer_3d",
+        parameters=[configured_params],
+        remappings=remappings)
     viz = Node(
         package='detection_visualizer',
         executable='detection_visualizer',
         name='viz',
+        parameters=[configured_params],
+        remappings=remappings)
+    detection_matcher_viz = Node(
+        package='detection_visualizer',
+        executable='det3d_viz_node',
+        name="detection_matcher_viz",
         parameters=[configured_params],
         remappings=remappings)
 
@@ -172,21 +184,21 @@ def generate_launch_description():
     
     ld.add_action(declare_debug_cmd)
     
-    ld.add_action(map_tf)
+    #ld.add_action(map_tf)
     #ld.add_action(base_tf)
-    ld.add_action(top_tf)
-    ld.add_action(cam_tf)
-    ld.add_action(pcl_tf)
-    ld.add_action(o_tf)
+    #ld.add_action(top_tf)
+    #ld.add_action(cam_tf)
+    #ld.add_action(pcl_tf)
+    #ld.add_action(o_tf)
 
     #ld.add_action(cam_grabber)
     #ld.add_action(livox_grabber)
 
     #ld.add_action(writer_py)
     #ld.add_action(writer_cpp)
-    ld.add_action(pcl_pub)
+    #ld.add_action(pcl_pub)
     #ld.add_action(pcl_pub_py)
-    ld.add_action(img_pub)
+    #ld.add_action(img_pub)
     #ld.add_action(video_pub)
 
     ld.add_action(preprocessing)
@@ -194,10 +206,12 @@ def generate_launch_description():
     #ld.add_action(border_checker)
     #ld.add_action(map_lookup)
     ld.add_action(project)
-    #ld.add_action(yolo)
+    ld.add_action(yolo)
     ld.add_action(detection_matcher)
 
+    ld.add_action(detection_visualizer_3d)
     ld.add_action(viz)
+    ld.add_action(detection_matcher_viz)
     
     #ld.add_action(map_server)
     #ld.add_action(map_lifecycle_manager_cmd)

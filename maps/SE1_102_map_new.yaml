@@ -1,0 +1,10 @@
+image: "SE1_102_map_new.pgm"
+resolution: 0.01 # raster image scale -> 0.01m/pix
+#origin: [-6.58, 4.63, -1.57] # sequence of operations: rotation is applied first, then translation !
+#origin: [-4.63, -6.58, 0.00] # the costmap doesn't rotate with the map, only translation is respected https://github.com/ros-planning/navigation2/issues/1511
+origin: [-6.63, -4.58, 0.00]
+occupied_thresh: 0.9
+free_thresh: 0.1
+negate: 0
+mode: "trinary"
+

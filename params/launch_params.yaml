@@ -11,6 +11,11 @@ cam_image:
     width: 640              # Width component of the camera stream resolution. Default value is 320
     height: 480             # Height component of the camera stream resolution. Default value is 240
     frame_id: image         # ID of the sensor frame. Default value is 'camera_frame'
+    output_topic: image     # Output ROS topic. Default value is 'image'
+    device_id: 0            # ID of the camera source. Default value is '0'
+    api_id: 0               # ID of the opencv api. Default value is '0'
+    cap_mode: 0             # Capture mode (only for libv4l). Default value is '0'
+    debug: false
 
 livox:
   ros__parameters:
@@ -101,7 +106,7 @@ pcl_preprocessing_node:
     downSample: true
     debug: false
     synchronized: false
-    input_topic: "/cloud"
+    input_topic: "/livox/lidar"
     output_cloud_topic: "/filteredPcl"
     output_map_topic: "/localMap"
     filter_x_min: 0.1
@@ -169,14 +174,19 @@ detector_node:
       
 detection_matcher:
   ros__parameters:
-    Project2D_topic: "/cluster_det"
+    Project2D_topic: "/detector_node/det"
     Detect2D_topic: "/detector_node/detections"
     Detect3D_topic: "/detections_det"
     Output3D_topic: "/matched_detections"
     sync_policy: 1000
     tresh: 0.5
+    debug: false
+    
+detection_visualizer_3d:
+  ros__parameters:
+    input_det3d_topic: '/detections_det'
+    output_topic: '~/dbg_markers'
     debug: true
-
 viz:
   ros__parameters:
     output_topic: '~/dbg_images'
@@ -189,6 +199,18 @@ viz:
     min_size_x: 50
     min_size_y: 50
     debug: true
+detection_matcher_viz:
+  ros__parameters:
+    input_det3d_topic: '/matched_detections'
+    output_topic: '~/matcher'
+    debug: true
+    
+    
+decompressor:
+  ros__parameters:
+    input_topic: '/image/compressed'
+    output_topic: "/detector_node/images" #'~/raw'
+    debug: false
 
 
 #map server should be configured mostly correctly, see:
@@ -198,7 +220,7 @@ map_server:
   ros__parameters:
     log_severity: 0 #0-debug, 1-info, 2-Warn, 3-Error, 4-Fatal
     use_sim_time: true
-    yaml_filename: "turtlebot3_world.yaml"
+    yaml_filename: "/home/kratochvila/Desktop/lidar/ros2-ws-ai4di/maps/SE1_102_map_new.yaml"
     topic_name: "map"
     frame_id: "map"
 
