@@ -31,7 +31,7 @@
 class Clustering : public rclcpp::Node
 {
   public:
-    Clustering() : Node("Clustering")
+    Clustering() : Node("clustering")
     {
       this->declare_parameter("input_topic", "/filteredPcl");
       this->declare_parameter("output_topic", "/detections_det");
@@ -209,6 +209,7 @@ class Clustering : public rclcpp::Node
 
         output_det.detections.push_back(det);
       }
+      output_det.header = output_det.detections[0].header;
       marker_publisher_->publish(output);
       detections_publisher_->publish(output_det);
 
