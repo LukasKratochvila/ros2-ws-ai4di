@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'detection_visualizer = detection_visualizer:main',
             'det3d_viz_node = detection_visualizer.det3d:main',
+            'decompressor_node = detection_visualizer.decompressor:main',
         ],
     },
 )
