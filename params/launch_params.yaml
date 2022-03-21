@@ -122,8 +122,8 @@ pcl_preprocessing_node:
 
 clustering:
   ros__parameters:
-    cluster_tolerance: 0.2
-    min_cluster_size: 20
+    cluster_tolerance: 0.1
+    min_cluster_size: 100
     max_cluster_size: 10000
     input_topic: "/filteredPcl"
     output_topic: "/detections_det"
@@ -204,6 +204,17 @@ detection_matcher_viz:
     input_det3d_topic: '/matched_detections'
     output_topic: '~/matcher'
     debug: true
+    
+tracker:
+  ros__parameters:
+    input_det_topic: '/detections_det'
+    output_det_topic: '/kalman_det'
+    debug: false
+detection_matcher_viz_kalman:
+  ros__parameters:
+    input_det3d_topic: '/kalman_det'
+    output_topic: '~/matcher'
+    debug: false
     
     
 decompressor:
