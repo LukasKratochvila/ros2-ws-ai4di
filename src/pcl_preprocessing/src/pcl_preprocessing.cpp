@@ -13,6 +13,9 @@
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include <geometry_msgs/msg/transform_stamped.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <tf2/exceptions.h>
@@ -194,6 +197,12 @@ class PclPreprocessing : public rclcpp::Node
 			catch (tf2::TransformException & ex) {
 				RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
 			}
+			
+			geometry_msgs::msg::PoseStamped map_pose;
+			map_pose.header = msg->header;
+			map_pose.pose = localMap->info.origin;
+			tf2::doTransform(map_pose,map_pose,transformStamped);
+			localMap->info.origin = map_pose.pose;
 
 			// create and fill the map
 			int mapRows = (int)(maxX/VGxRes);
