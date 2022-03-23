@@ -46,4 +46,5 @@ source install/setup.bash
 | pcl_preprocessing | Filtering and preprocessing the point cloud data module | Used | C++ |
 | pcl_pub_cpp | The point cloud publisher module for visualization saved data | Used | C++ |
 | projection | YOLO detections projector module | Used | C++ |
+| tracker | 3D detection tracker based od deepSORT method | Used | Python |
 | writer_cpp | Data saving module | Optional | C++ |
