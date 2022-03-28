@@ -33,7 +33,6 @@ source install/setup.bash
 
 | Package | Description | Status | Language |
 | :---: | :---: | :---: | :---: |
-| border_checker | Module for filtering point cloud and finding the border | Old - Unused | C++ |
 | clustering | Module for finding clusters in the point cloud | Used | C++ |
 | darknet_vendor | Subrepository for CNN framework | Used | C++ |
 | detection_matcher_py | Module for finding correspondence between point cloud msgs and images msgs | Used | Python |
@@ -46,5 +45,5 @@ source install/setup.bash
 | pcl_preprocessing | Filtering and preprocessing the point cloud data module | Used | C++ |
 | pcl_pub_cpp | The point cloud publisher module for visualization saved data | Used | C++ |
 | projection | YOLO detections projector module | Used | C++ |
-| tracker | 3D detection tracker based od deepSORT method | Used | Python |
+| tracker | 2D and 3D detection tracker based od deepSORT method | Used | Python |
 | writer_cpp | Data saving module | Optional | C++ |
