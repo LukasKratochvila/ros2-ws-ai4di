@@ -58,6 +58,8 @@ class PclPreprocessing : public rclcpp::Node
 			this->declare_parameter("voxel_grid_y_res", 0.025);
 			this->declare_parameter("voxel_grid_z_res", 0.025);
 			this->declare_parameter("map_frame", "map");
+			
+			this->declare_parameter("agg_window", 1e9);
 				
 			crop = this->get_parameter("crop").as_bool();
 			detectFloor = this->get_parameter("detectFloor").as_bool();
@@ -84,6 +86,12 @@ class PclPreprocessing : public rclcpp::Node
 			mapPub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(this->get_parameter("output_map_topic").as_string(), 10);
 			tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 			transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+			
+			// agg
+			cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+			window_ = this->get_parameter("agg_window").as_double(); //1e9; //1 sec in nanosecond
+			aggregation_started_time_ = this->now().nanoseconds();
+			agg_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(this->get_parameter("output_cloud_topic").as_string()+"/agg", 10);
 		}
 	private:
 	    void lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg){
@@ -166,7 +174,44 @@ class PclPreprocessing : public rclcpp::Node
 			pcl::toROSMsg( *cloud, *message);
 			if(debug)
 				RCLCPP_INFO(get_logger(), "Publishing cloud of size of %d points", cloud->size());
+			//if(debug)
+			//	RCLCPP_INFO(get_logger(), "Input msg stamp:%d Output msg stamp:%d", msg->header.stamp.sec, message->header.stamp.sec);
+			message->header=msg->header;
 			publisher_->publish(*message);
+			
+			// agg
+			uint64_t time_nano=msg->header.stamp.sec * 1e9 + msg->header.stamp.nanosec;
+			uint64_t diff = time_nano-aggregation_started_time_;
+			if((diff) > window_ && cloud_->size() != 0)
+			{
+				aggregation_started_time_=time_nano;
+				sensor_msgs::msg::PointCloud2::SharedPtr m(new sensor_msgs::msg::PointCloud2);
+				pcl::toROSMsg( *cloud_, *m);
+				m->header=msg->header;
+				agg_publisher_->publish(*m);
+				if(debug)
+					RCLCPP_INFO(get_logger(), "Publishing cloud of size of %d points", cloud_->size());
+				cloud_->points.clear();
+			}
+			else
+			{
+				transformStamped = tf_buffer_->lookupTransform(msg->header.frame_id, 
+										 msg->header.frame_id, 
+										 tf2_ros::fromMsg(msg->header.stamp), 
+										 tf2::Duration(diff));
+				Eigen::Matrix4f transform_trans = Eigen::Matrix4f::Identity();
+				Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
+				transform_trans(0, 3) = transformStamped.transform.translation.x;
+				transform_trans(1, 3) = transformStamped.transform.translation.y;
+				transform_trans(2, 3) = transformStamped.transform.translation.z;
+				transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(transformStamped.transform.rotation.w, 
+													  transformStamped.transform.rotation.x, 
+													  transformStamped.transform.rotation.y, 
+													  transformStamped.transform.rotation.z));
+				
+				pcl::transformPointCloud(*cloud,*cloud,transform_trans*transform_rot);
+				*cloud_ += *cloud;
+			}
 
 
 			// Occupancy grid
@@ -189,7 +234,6 @@ class PclPreprocessing : public rclcpp::Node
 			localMap->info.origin.position.y = minY;
 			std::string toFrameRel = mapFrame;
 			std::string fromFrameRel = msg->header.frame_id;
-			geometry_msgs::msg::TransformStamped transformStamped;
 			try {
 				transformStamped = tf_buffer_->lookupTransform(
 					toFrameRel, fromFrameRel,tf2::TimePointZero);
@@ -211,8 +255,8 @@ class PclPreprocessing : public rclcpp::Node
 			if(debug)
 				RCLCPP_INFO(get_logger(), "Map has %d rows and %d columns.", mapRows, mapCols);
 			for (const auto& point: cloud->points){
-				if(debug)
-    				RCLCPP_INFO(get_logger(), "Point x = %lf, y = %lf, z = %lf", point.x, point.y, point.z);
+				//if(debug)
+    				//RCLCPP_INFO(get_logger(), "Point x = %lf, y = %lf, z = %lf", point.x, point.y, point.z);
 		      	//xcoord = (int)((x - minX) / cellResolution);
 		      	//ycoord = (int)((y - minY) / cellResolution);
 		      	//RCLCPP_INFO(get_logger(), "[] = %d", ((int)((point.y - minY) / VGlatRes)) * mapRows + ((int)((point.x - minX) / VGlatRes)));
@@ -237,6 +281,13 @@ class PclPreprocessing : public rclcpp::Node
 		double minX, minY, minZ, maxX, maxY, maxZ;
 		double VGxRes, VGyRes, VGzRes;
 		std::string mapFrame;
+		
+		// agg
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_{nullptr};
+		double window_;
+		rcl_time_point_value_t aggregation_started_time_;
+		rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr agg_publisher_{nullptr};
+		geometry_msgs::msg::TransformStamped transformStamped;
 };
 
 int main(int argc, char ** argv)
