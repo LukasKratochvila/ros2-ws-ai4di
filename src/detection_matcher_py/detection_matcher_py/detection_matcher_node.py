@@ -13,13 +13,13 @@ from vision_msgs.msg import Detection2DArray, Detection3DArray, Detection3D
 class DetectionMatcher(Node):
    def __init__(self):
       super().__init__('detection_matcher')
-      self.declare_parameter("Project2D_topic", "/projection")
+      self.declare_parameter("Project2D_topic", "/cluster_det")
       self.declare_parameter("Detect2D_topic", "/detector_node/detections")
-      self.declare_parameter("Detect3D_topic", "/detections")
+      self.declare_parameter("Detect3D_topic", "/detections_det")
       self.declare_parameter("Output3D_topic", "/detections3D")
       self.declare_parameter("queue_size", 10)
       self.declare_parameter("time_toll", 10)
-      self.declare_parameter("tresh", 0.5)
+      self.declare_parameter("tresh", 0.9)
       self.declare_parameter("debug", True)     
 
       self.Project2D_topic = self.get_parameter("Project2D_topic")._value
@@ -68,6 +68,10 @@ class DetectionMatcher(Node):
          return
       if self.debug:
          self.get_logger().info("Processing three topics.")
+         
+      outmsg = Detection3DArray()
+      outmsg.header = detect3Dmsg.header
+      det = Detection3D()
 
       # IoU metric is applied across all YOLO and projections, individual maximums are selected
       for i, project_det in zip(range(len(project2Dmsg.detections)), project2Dmsg.detections):
@@ -82,12 +86,18 @@ class DetectionMatcher(Node):
                                        detect.bbox.center.y,
                                        detect.bbox.size_y,
                                        self.tresh))
+         if self.debug:
+            self.get_logger().info("Max iou:{}".format(max(candidates)))
+         if max(candidates) == 0:
+            continue
          maxIoU = candidates.index(max(candidates))
+         det = detect3Dmsg.detections[i]
          for res in detect2Dmsg.detections[maxIoU].results:
-            detect3Dmsg.detections[i].results.append(res)
+            det.results.append(res)
+         outmsg.detections.append(det)
     
       # Only the classified boxes get republished as vision_msgs::msg::Detection3DArray
-      self.detect3DPub_.publish(detect3Dmsg)
+      self.detect3DPub_.publish(outmsg)
       if self.debug:
          self.get_logger().info("Published detection3darray message.")
     
