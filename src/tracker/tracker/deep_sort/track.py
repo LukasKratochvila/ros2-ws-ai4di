@@ -64,7 +64,7 @@ class Track:
     """
 
     def __init__(self, mean, covariance, track_id, n_init, max_age,
-                 feature=None):
+                 feature=None, confidence=0, cls=None):
         self.mean = mean
         self.covariance = covariance
         self.track_id = track_id
@@ -76,6 +76,9 @@ class Track:
         self.features = []
         if feature is not None:
             self.features.append(feature)
+            
+        self.confidence = confidence
+        self.cls = cls
 
         self._n_init = n_init
         self._max_age = max_age
@@ -189,6 +192,10 @@ class Track3D:
     feature : Optional[ndarray]
         Feature vector of the detection this track originates from. If not None,
         this feature is added to the `features` cache.
+    confidence : Optional[float]
+        Class confidence.
+    cls : Optional[str]
+        Class name.
 
     Attributes
     ----------
@@ -213,7 +220,7 @@ class Track3D:
     """
 
     def __init__(self, mean, covariance, track_id, n_init, max_age,
-                 feature=None):
+                 feature=None, confidence=0, cls=None):
         self.mean = mean
         self.covariance = covariance
         self.track_id = track_id
@@ -225,6 +232,9 @@ class Track3D:
         self.features = []
         if feature is not None:
             self.features.append(feature)
+            
+        self.confidence = confidence
+        self.cls = cls
 
         self._n_init = n_init
         self._max_age = max_age

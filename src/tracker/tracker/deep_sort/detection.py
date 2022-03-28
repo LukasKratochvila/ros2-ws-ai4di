@@ -12,6 +12,8 @@ class Detection(object):
         Bounding box in format `(x, y, w, h)`.
     confidence : float
         Detector confidence score.
+    cls : str
+        Class name.
     feature : array_like
         A feature vector that describes the object contained in this image.
 
@@ -26,9 +28,10 @@ class Detection(object):
 
     """
 
-    def __init__(self, tlwh, confidence, feature):
+    def __init__(self, tlwh, confidence, cls, feature):
         self.tlwh = np.asarray(tlwh, dtype=np.float)
         self.confidence = float(confidence)
+        self.cls = cls
         self.feature = np.asarray(feature, dtype=np.float32)
 
     def to_tlbr(self):
@@ -58,6 +61,8 @@ class Detection3D(object):
         Bounding box in format `(x, y, z, w, h, l)`.
     confidence : float
         Detector confidence score.
+    cls : str
+        Class name.
     feature : array_like
         A feature vector that describes the object contained in this image.
 
@@ -72,9 +77,10 @@ class Detection3D(object):
 
     """
 
-    def __init__(self, tlwh, confidence, feature):
+    def __init__(self, tlwh, confidence, cls, feature):
         self.tlwh = np.asarray(tlwh, dtype=np.float)
         self.confidence = float(confidence)
+        self.cls = cls
         self.feature = np.asarray(feature, dtype=np.float32)
 
     def to_tlbr(self):

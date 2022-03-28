@@ -134,7 +134,7 @@ class Tracker:
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track(
             mean, covariance, self._next_id, self.n_init, self.max_age,
-            detection.feature))
+            detection.feature, detection.confidence, detection.cls))
         self._next_id += 1
         
 class Tracker3D:
@@ -264,5 +264,5 @@ class Tracker3D:
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track3D(
             mean, covariance, self._next_id, self.n_init, self.max_age,
-            detection.feature))
+            detection.feature, detection.confidence, detection.cls))
         self._next_id += 1
