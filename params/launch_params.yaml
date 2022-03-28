@@ -1,23 +1,23 @@
 # Must be defined name in launch
 
-cam_image:
+cam_image_node:
   ros__parameters:
-    reliability: 'reliable' # Reliability QoS setting. Either 'reliable' (default) or 'best_effort'
-    history: 'keep_last'    # History QoS setting. Either 'keep_last' (default) or 'keep_all'. If 'keep_last', then up to N samples are stored where N is the depth
-    depth: 10               # Depth of the publisher queue. Only honored if history QoS is 'keep_last'. Default value is 10
-    frequency: 30.0         # Publish frequency in Hz. Default value is 30
-    burger_mode: false      # Produce images of burgers rather than connecting to a camera
-    show_camera: false      # Show camera stream. Either 'true' or 'false' (default)
-    width: 640              # Width component of the camera stream resolution. Default value is 320
-    height: 480             # Height component of the camera stream resolution. Default value is 240
-    frame_id: image         # ID of the sensor frame. Default value is 'camera_frame'
-    output_topic: image     # Output ROS topic. Default value is 'image'
-    device_id: 0            # ID of the camera source. Default value is '0'
-    api_id: 0               # ID of the opencv api. Default value is '0'
-    cap_mode: 0             # Capture mode (only for libv4l). Default value is '0'
+    reliability: 'reliable'               # Reliability QoS setting. Either 'reliable' (default) or 'best_effort'
+    history: 'keep_last'                  # History QoS setting. Either 'keep_last' (default) or 'keep_all'. If 'keep_last', then up to N samples are stored where N is the depth
+    depth: 10                             # Depth of the publisher queue. Only honored if history QoS is 'keep_last'. Default value is 10
+    frequency: 30.0                       # Publish frequency in Hz. Default value is 30
+    burger_mode: false                    # Produce images of burgers rather than connecting to a camera
+    show_camera: false                    # Show camera stream. Either 'true' or 'false' (default)
+    width: 640                            # Width component of the camera stream resolution. Default value is 320
+    height: 480                           # Height component of the camera stream resolution. Default value is 240
+    frame_id: image                       # ID of the sensor frame. Default value is 'camera_frame'
+    output_topic: '/detector_node/images' # Output ROS topic. Default value is 'image'
+    device_id: 0                          # ID of the camera source. Default value is '0'
+    api_id: 0                             # ID of the opencv api. Default value is '0'
+    cap_mode: 0                           # Capture mode (only for libv4l). Default value is '0'
     debug: false
 
-livox:
+livox_node:
   ros__parameters:
     xfer_format: 0                              # 0-Pointcloud2(PointXYZRTL), 1-customized pointcloud format
     multi_topic: 0                              # 0-All LiDARs share the same topic, 1-One LiDAR one topic
@@ -29,7 +29,13 @@ livox:
     cmdline_input_bd_code: "000000000000001"
     lvx_file_path: "/home/livox/livox_test.lvx"
 
-writer_cpp:
+decompressor_node:
+  ros__parameters:
+    input_topic: "/image/compressed"
+    output_topic: "/detector_node/images" #'~/raw'
+    debug: false
+
+writer_node:
   ros__parameters:
     save_dir: "./"
     img_sub_dir: "image/"
@@ -44,44 +50,16 @@ writer_cpp:
     img_file_ext: "jpg"
     pcl_file_ext: "pcd"
     debug: true
-
-#writer_py:
-#  ros__parameters:
-#    save_dir: "./"
-#    img_sub_dir: "image/"
-#    pcl_sub_dir: "pcl/"
-#    input_img_topic: "/image"
-#    input_pcl_topic: "/livox/lidar"
-#    mode: "both" # img, pcl or both
-#    synchronized: false
-#    time_toll: 0.01
-#    start_img_counter: 0
-#    start_pcl_counter: 0
-#    img_file_ext: "jpg"
-#    pcl_file_ext: "pcd"
-#    debug: true
-
-pcl_pub_cpp_node:
+pcl_pub_node:
   ros__parameters:
     input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
     frequency: 6.0
-    output_topic: "/cloud"
+    output_topic: "/livox/lidar"
     frame_id: "cloud"
     start_counter: 0
     file_ext: ".pcd"
     debug: false
-    
-#pcl_pub_py:
-#  ros__parameters:
-#    input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
-#    frequency: 2.0
-#    output_topic: "/cloud"
-#    frame_id: "cloud"
-#    start_counter: 0
-#    file_ext: "pcd"
-#    debug: false
-
-img_pub_py:
+img_pub_node:
   ros__parameters:
     input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/image" #"/home/kratochvila/Desktop/lidar/mereni2/image"
     output_topic: "/detector_node/images"
@@ -90,10 +68,9 @@ img_pub_py:
     start_counter: 0
     file_ext: "jpg"
     debug: false
-
-video_pub:
+video_pub_node:
   ros__parameters:
-    output_topic: "/image"
+    output_topic: "/detector_node/images"
     frame_id: "image"
     frequency: 2.0
     encoding: "bgr8"
@@ -107,8 +84,8 @@ pcl_preprocessing_node:
     debug: false
     synchronized: false
     input_topic: "/livox/lidar"
-    output_cloud_topic: "/filteredPcl"
-    output_map_topic: "/localMap"
+    output_cloud_topic: "~/filteredPcl"
+    output_map_topic: "~/localMap"
     filter_x_min: 0.1
     filter_y_min: -10.0
     filter_z_min: -0.2
@@ -119,47 +96,35 @@ pcl_preprocessing_node:
     voxel_grid_y_res: 0.025
     voxel_grid_z_res: 0.025
     map_frame: "map"
+    agg_window: 2e8
 
-clustering:
+clustering_node:
   ros__parameters:
     cluster_tolerance: 0.1
     min_cluster_size: 100
     max_cluster_size: 10000
-    input_topic: "/filteredPcl"
-    output_topic: "/detections_det"
-    output_topic_vizualization: "/detections"
+    input_topic: "/pcl_preprocessing_node/filteredPcl/agg"
+    output_topic: "~/detections_clusters"
+    output_topic_vizualization: "~/detections"
     debug: false
-
-border_checker:
-  ros__parameters:
-    input_topic: "/cloud"
-    output_topic: "topic"
-    mean_k: 50
-    standard_dev_thresh: 1.0
-    first_filter_limits_min: -2.0
-    first_filter_limits_max: -0.1
-    first_filter_field: "z"
-    second_filter_limits_min: 2.0
-    second_filter_limits_max: 10.0
-    second_filter_field: "z"
 
 map_lookup_node:
   ros__parameters:
-    input_topic: "/detections"
-    output_boxes_topic: "/unknownObstacles"
-    output_map_topic: "/ObstacleMap"
+    input_topic: "/clustering_node/detections"
+    output_boxes_topic: "~/unknownObstacles"
+    output_map_topic: "~/ObstacleMap"
     synchronised: false
     map_server: "/map_server/map"
     debug: false
 
-projection:
+projection_node:
   ros__parameters:
-    input_topic: "/detections"
-    output_topic: "/detector_node/det"
+    input_topic: "/clustering_node/detections"
+    output_topic: "~/projections"
     output_pcl_topic: "~/pcl"
     output_img_topic: "~/img"
     output_frame: "image"
-    debug: false
+    debug: true
 
 # open robotisc - yolo
 detector_node:
@@ -172,56 +137,84 @@ detector_node:
       threshold: 0.25
       nms_threshold: 0.45
       
-detection_matcher:
+detection_matcher_node:
   ros__parameters:
-    Project2D_topic: "/detector_node/det"
+    Project2D_topic: "/projection_node/projections"
     Detect2D_topic: "/detector_node/detections"
-    Detect3D_topic: "/detections_det"
-    Output3D_topic: "/matched_detections"
-    sync_policy: 1000
+    Detect3D_topic: "/clustering_node/detections_clusters"
+    Output3D_topic: "~/matched_detections"
+    queue_size: 100
+    time_toll: 0.1
     tresh: 0.5
     debug: false
+
+tracker_2d_node:
+  ros__parameters:
+    input_det_topic: '/detector_node/detections'
+    output_det_topic: '~/detections_tracker'
+    dim: 2
+    model_path: "model/tracker-mars-small128.pb"
+    debug: false
+tracker_3d_node:
+  ros__parameters:
+    input_det_topic: '/clustering_node/detections_clusters'
+    output_det_topic: '~/detections_tracker'
+    dim: 3
+    model_path: None
+    debug: false
     
-detection_visualizer_3d:
+viz_2d_yolo:
   ros__parameters:
-    input_det3d_topic: '/detections_det'
-    output_topic: '~/dbg_markers'
-    debug: true
-viz:
-  ros__parameters:
-    output_topic: '~/dbg_images'
     input_img_topic: '/detector_node/images'
     input_det2d_topic: '/detector_node/detections'
-    time_toll: 1000 #0.01
-    queue_size: 10
+    output_topic: '~/dbg_images'
+    time_toll: 0.1
+    queue_size: 100
     start_counter: 0
     encoding: "bgr8"
     min_size_x: 50
     min_size_y: 50
     debug: true
-detection_matcher_viz:
+viz_2d_projection:
   ros__parameters:
-    input_det3d_topic: '/matched_detections'
-    output_topic: '~/matcher'
+    input_img_topic: '/detector_node/images'
+    input_det2d_topic: '/projection_node/projections'
+    output_topic: '~/dbg_images'
+    time_toll: 0.001
+    queue_size: 100
+    start_counter: 0
+    encoding: "bgr8"
+    min_size_x: 50
+    min_size_y: 50
+    debug: false
+viz_2d_tracker:
+  ros__parameters:
+    input_img_topic: '/detector_node/images'
+    input_det2d_topic: '/tracker_2d_node/detections_tracker'
+    output_topic: '~/dbg_images'
+    time_toll: 0.001
+    queue_size: 100
+    start_counter: 0
+    encoding: "bgr8"
+    min_size_x: 50
+    min_size_y: 50
+    debug: false
+
+viz_3d_clusters:
+  ros__parameters:
+    input_det3d_topic: '/clustering_node/detections_clusters'
+    output_topic: '~/dbg_markers'
+    debug: false
+viz_3d_matcher:
+  ros__parameters:
+    input_det3d_topic: '/detection_matcher_node/matched_detections'
+    output_topic: '~/dbg_markers'
+    debug: false
+viz_3d_tracker:
+  ros__parameters:
+    input_det3d_topic: '/tracker_3d_node/detections_tracker'
+    output_topic: '~/dbg_markers'
     debug: true
-    
-tracker:
-  ros__parameters:
-    input_det_topic: '/detections_det'
-    output_det_topic: '/kalman_det'
-    debug: false
-detection_matcher_viz_kalman:
-  ros__parameters:
-    input_det3d_topic: '/kalman_det'
-    output_topic: '~/matcher'
-    debug: false
-    
-    
-decompressor:
-  ros__parameters:
-    input_topic: '/image/compressed'
-    output_topic: "/detector_node/images" #'~/raw'
-    debug: false
 
 
 #map server should be configured mostly correctly, see:

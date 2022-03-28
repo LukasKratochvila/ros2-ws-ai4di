@@ -27,79 +27,101 @@ def generate_launch_description():
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
 
-    map_tf = Node(
+    tf_map_to_base_link = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['1','2','0.2','0','0','0','map','loki_1_base_link']#'1','2','0.2','0','0','0.2','map','loki_1_base_link'
         )
-    base_tf = Node(
+    tf_top_plate_to_base_link = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['0','0','0.2','0','0','0','loki_1_foot_link','loki_1_base_link']#'1','2','0.2','0','0','0.2','map','loki_1_base_link'
-        )
-    top_tf = Node(
+        arguments=['0','0','0.1','0','0','0','loki_1_base_link','loki_1_top_plate_link'])
+    
+    tf_top_plate_to_base_footprint = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['0','0','0.1','0','0','0','loki_1_base_footprint','loki_1_top_plate_link']) # '0','0','0.1','0','0','0','loki_1_base_link','loki_1_top_plate_link'
-    cam_tf = Node(
+        arguments=['0','0','0.1','0','0','0','loki_1_base_footprint','loki_1_top_plate_link'])
+    tf_cloud_to_top_plate = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['0.2','-0.1','0','0','0','0','loki_1_top_plate_link','cloud'] # loki_1_camera
         )
-    pcl_tf = Node(
+    tf_image_to_cloud = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['-0.030','0.045','0','0','{}'.format(-5/180*3.14),'0','cloud','image'])
-    o_tf = Node(
+    tf_for_local_map = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['28.5','-18','0','{}'.format(0/180*3.14),'0','0','map','mapOrigin'])
     
-    decompress = Node(
+    decompressor_node = Node(
         package='detection_visualizer',
         executable='decompressor_node',
-        name='decompressor',
+        name='decompressor_node',
         parameters=[configured_params],
         remappings=remappings)
         
-        
-    
-    preprocessing = Node(
+    pcl_preprocessing_node = Node(
         package='pcl_preprocessing',
         executable='pcl_preprocessing_node',
         name='pcl_preprocessing_node',
         parameters=[configured_params],
         remappings=remappings)
-    cluster = Node(
+    clustering_node = Node(
         package='clustering',
         executable='clustering',
+        name='clustering_node',
         parameters=[configured_params],
         remappings=remappings)
         
-    
-    tracker = Node(
+    detector_node = Node(
+        package='openrobotics_darknet_ros',
+        executable='detector_node',
+        name = 'detector_node',
+        parameters=[configured_params],
+        remappings=remappings)
+           
+    tracker_2d_node = Node(
         package='tracker',
         executable='tracker_node',
-        name='tracker',
+        name='tracker_2d_node',
         parameters=[configured_params],
         remappings=remappings)
-    detection_matcher_viz2 = Node(
+    tracker_3d_node = Node(
+        package='tracker',
+        executable='tracker_node',
+        name='tracker_3d_node',
+        parameters=[configured_params],
+        remappings=remappings)
+        
+    viz_2d_yolo = Node(
+        package='detection_visualizer',
+        executable='detection_visualizer',
+        name='viz_2d_yolo',
+        parameters=[configured_params],
+        remappings=remappings)
+    viz_2d_tracker = Node(
+        package='detection_visualizer',
+        executable='detection_visualizer',
+        name='viz_2d_tracker',
+        parameters=[configured_params],
+        remappings=remappings)
+        
+    viz_3d_clusters = Node(
         package='detection_visualizer',
         executable='det3d_viz_node',
-        name="detection_matcher_viz_kalman",
+        name="viz_3d_clusters",
+        parameters=[configured_params],
+        remappings=remappings)
+    viz_3d_tracker = Node(
+        package='detection_visualizer',
+        executable='det3d_viz_node',
+        name="viz_3d_tracker",
         parameters=[configured_params],
         remappings=remappings)
         
-    #uncompress = Node(
-    #    package='image_transport',
-    #    executable='republish',
-    #    arguments=['compressed', 'in:=/image', 'raw', 'out:=/republish_image'],
-    #    remappings=[('/in/compressed', '/image/compressed')])
-    #    #arguments=['compressed', 'raw'], #, 'in:=/image/compresed', 'in:=/image/compressed', 'out:=/republish_image'
-    #    #remappings=[('/in', '/image/compressed'),
-    #    #          ('/out', '/uncompressed')])
-        
-    node_names = ['map_server','tracker'] #  for lifecycle_manager
+    node_names = ['map_server'] #  for lifecycle_manager
 
     map_server = Node(
         package='nav2_map_server',
@@ -120,25 +142,33 @@ def generate_launch_description():
                         {'node_names': node_names}])
 
     ld = LaunchDescription()
-
+    
     ld.add_action(declare_map_yaml_file_cmd)
     
-    #ld.add_action(map_tf)
-    #ld.add_action(base_tf)
-    ld.add_action(top_tf)
-    ld.add_action(cam_tf)
-    ld.add_action(pcl_tf)
-    #ld.add_action(o_tf)
+    #ld.add_action(tf_map_to_base_link)
+    #ld.add_action(tf_top_plate_to_base_link)
     
-    ld.add_action(decompress)
+    ld.add_action(tf_top_plate_to_base_footprint)
+    ld.add_action(tf_cloud_to_top_plate)
+    ld.add_action(tf_image_to_cloud)
+    ld.add_action(tf_for_local_map)
     
-    ld.add_action(detection_matcher_viz2)
-    ld.add_action(tracker)
+    ld.add_action(decompressor_node)
+    
+    ld.add_action(pcl_preprocessing_node)
+    ld.add_action(clustering_node)
+    
+    ld.add_action(detector_node)
+    
+    ld.add_action(tracker_2d_node)
+    ld.add_action(tracker_3d_node)
+    
+    ld.add_action(viz_2d_yolo)
+    ld.add_action(viz_2d_tracker)
+    
+    ld.add_action(viz_3d_clusters)
+    ld.add_action(viz_3d_tracker)
     
     ld.add_action(map_server)
     ld.add_action(map_lifecycle_manager_cmd)
-    
-    ld.add_action(preprocessing)
-    ld.add_action(cluster)
-
     return ld

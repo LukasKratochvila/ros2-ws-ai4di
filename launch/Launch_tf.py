@@ -27,30 +27,30 @@ def generate_launch_description():
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
 
-    map_tf = Node(
+    tf_map_to_base_link = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['1','2','0.2','0','0','0','map','loki_1_base_link']#'1','2','0.2','0','0','0.2','map','loki_1_base_link'
         )
-    base_tf = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        arguments=['0','0','0.2','0','0','0','loki_1_foot_link','loki_1_base_link']#'1','2','0.2','0','0','0.2','map','loki_1_base_link'
-        )
-    top_tf = Node(
+    tf_top_plate_to_base_link = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['0','0','0.1','0','0','0','loki_1_base_link','loki_1_top_plate_link'])
-    cam_tf = Node(
+    
+    tf_top_plate_to_base_footprint = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0','0','0.1','0','0','0','loki_1_base_footprint','loki_1_top_plate_link'])
+    tf_cloud_to_top_plate = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['0.2','-0.1','0','0','0','0','loki_1_top_plate_link','cloud'] # loki_1_camera
         )
-    pcl_tf = Node(
+    tf_image_to_cloud = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['-0.030','0.045','0','0','{}'.format(-5/180*3.14),'0','cloud','image'])
-    o_tf = Node(
+    tf_for_local_map = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=['28.5','-18','0','{}'.format(0/180*3.14),'0','0','map','mapOrigin'])
@@ -59,11 +59,12 @@ def generate_launch_description():
     
     ld.add_action(declare_debug_cmd)
     
-    #ld.add_action(map_tf)
-    #ld.add_action(base_tf)
-    #ld.add_action(top_tf)
-    ld.add_action(cam_tf)
-    ld.add_action(pcl_tf)
-    #ld.add_action(o_tf)
+    ld.add_action(tf_map_to_base_link)
+    ld.add_action(tf_top_plate_to_base_link)
+    
+    ld.add_action(tf_top_plate_to_base_footprint)
+    ld.add_action(tf_cloud_to_top_plate)
+    ld.add_action(tf_image_to_cloud)
+    ld.add_action(tf_for_local_map)
 
     return ld
