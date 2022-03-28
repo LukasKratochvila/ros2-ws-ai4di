@@ -22,6 +22,32 @@ from rclpy.qos import QoSReliabilityPolicy
 from vision_msgs.msg import Detection3DArray
 from visualization_msgs.msg import Marker, MarkerArray
 
+import colorsys
+
+def create_unique_color_float(tag, hue_step=0.41):
+    """Create a unique RGB color code for a given track id (tag).
+
+    The color code is generated in HSV color space by moving along the
+    hue angle and gradually changing the saturation.
+
+    Parameters
+    ----------
+    tag : int
+        The unique target identifying tag.
+    hue_step : float
+        Difference between two neighboring color codes in HSV space (more
+        specifically, the distance in hue channel).
+
+    Returns
+    -------
+    (float, float, float)
+        RGB color code in range [0, 1]
+
+    """
+    h, v = (tag * hue_step) % 1, 1. - (int(tag * hue_step) % 4) / 5.
+    r, g, b = colorsys.hsv_to_rgb(h, 1., v)
+    return r, g, b
+
 class Det3dVisualizerNode(Node):
 
     def __init__(self):
@@ -74,8 +100,10 @@ class Det3dVisualizerNode(Node):
             marker.pose = detection.bbox.center
             
             marker.scale = detection.bbox.size
+            
+            c=create_unique_color_float(int(detection.tracking_id))
 
-            marker.color.a, marker.color.r, marker.color.g, marker.color.b = 0.6, 0.7, 0.7, 0.7
+            marker.color.a, marker.color.r, marker.color.g, marker.color.b = 0.6, c[0], c[1], c[2]
             
             detVizmsg.markers.append(marker);
 
@@ -86,11 +114,11 @@ class Det3dVisualizerNode(Node):
             text.type = Marker.TEXT_VIEW_FACING
             text.action = Marker.ADD
             
-            text.text = "ID: {}\nClass: {}\nProb: {:3f}".format(detection.tracking_id, max_class, max_score)
+            text.text = "ID: {}\nClass: {}\nProb: {:.1f}".format(detection.tracking_id, max_class, max_score)
             
             text.pose = detection.bbox.center
             
-            text.scale.x, text.scale.y, text.scale.z = 0.5, 0.5, 0.5
+            text.scale.x, text.scale.y, text.scale.z = 0.2, 0.2, 0.2
             
             text.color.a, text.color.r, text.color.g, text.color.b = 0.6, 0.7, 0.7, 0.7
             

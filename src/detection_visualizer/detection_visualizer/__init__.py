@@ -86,8 +86,9 @@ class DetectionVisualizerNode(Node):
                 elif hypothesis.score == 0.0:
                     max_class = 'Unknown'
             if max_class is None:
-                self.get_logger().err("Failed to find class with highest score")
-                continue
+                #self.get_logger().err("Failed to find class with highest score")
+                #continue
+                max_class='No class'
 
             cx = detection.bbox.center.x
             cy = detection.bbox.center.y
