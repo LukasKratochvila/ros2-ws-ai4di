@@ -45,8 +45,8 @@ ament_target_dependencies(${PROJECT_NAME}
 	rclcpp 
 	sensor_msgs
 	pcl_conversions
-        visualization_msgs
-        vision_msgs)
+  visualization_msgs
+  vision_msgs)
 
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
