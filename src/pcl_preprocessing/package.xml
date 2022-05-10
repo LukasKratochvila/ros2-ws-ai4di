@@ -6,6 +6,8 @@
   <description>TODO: Package description</description>
   <maintainer email="ros2@todo.todo">ros2</maintainer>
   <license>TODO: License declaration</license>
+  
+  <depend>nav2_costmap_2d</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
