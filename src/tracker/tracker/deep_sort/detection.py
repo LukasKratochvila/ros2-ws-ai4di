@@ -59,6 +59,8 @@ class Detection3D(object):
     ----------
     tlwh : array_like
         Bounding box in format `(x, y, z, w, h, l)`.
+    angle : float
+        3D bounding rotation angle in xy plane.
     confidence : float
         Detector confidence score.
     cls : str
@@ -77,10 +79,11 @@ class Detection3D(object):
 
     """
 
-    def __init__(self, tlwh, confidence, cls, feature):
+    def __init__(self, tlwh, confidence, cls, angle, feature):
         self.tlwh = np.asarray(tlwh, dtype=np.float)
         self.confidence = float(confidence)
         self.cls = cls
+        self.angle = angle
         self.feature = np.asarray(feature, dtype=np.float32) if feature is not None else []
 
     def to_tlbr(self):

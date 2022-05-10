@@ -220,7 +220,7 @@ class Track3D:
     """
 
     def __init__(self, mean, covariance, track_id, n_init, max_age,
-                 feature=None, confidence=0, cls=None):
+                 feature=None, confidence=0, cls=None, angle=None):
         self.mean = mean
         self.covariance = covariance
         self.track_id = track_id
@@ -235,6 +235,7 @@ class Track3D:
             
         self.confidence = confidence
         self.cls = cls
+        self.angle = angle
 
         self._n_init = n_init
         self._max_age = max_age
@@ -296,6 +297,8 @@ class Track3D:
         self.mean, self.covariance = kf.update(
             self.mean, self.covariance, detection.to_xyah())
         self.features.append(detection.feature)
+        self.angle = detection.angle
+
 
         self.hits += 1
         self.time_since_update = 0

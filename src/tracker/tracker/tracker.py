@@ -1,6 +1,7 @@
 import rclpy
 import cv2
 import os
+import math
 import numpy as np
 
 from rclpy.node import Node
@@ -123,7 +124,11 @@ class TrackerNode(Node):
                                            det.bbox.size.x,
                                            det.bbox.size.y,
                                            det.bbox.size.z),
-                                           det.results[0].score if len(det.results) > 0 else 0, det.results[0].id if len(det.results) > 0 else None, None))
+                                           det.results[0].score if len(det.results) > 0 else 0, 
+                                           det.results[0].id if len(det.results) > 0 else None, 
+                                           math.acos(det.bbox.center.orientation.x), # assume rotation only in xy plane
+                                           None))
+
         if self.debug:
             self.get_logger().info('Tracker_3D tracks # before: {}.'.format(len(self.tracker.tracks)))
         if self.debug:
@@ -141,6 +146,10 @@ class TrackerNode(Node):
             det.bbox.center.position.x=track.mean[0]
             det.bbox.center.position.y=track.mean[1]
             det.bbox.center.position.z=track.mean[2]
+            det.bbox.center.orientation.x=math.cos(track.angle) if track.angle != None else 0.
+            det.bbox.center.orientation.y=math.sin(track.angle) if track.angle != None else 0.
+            det.bbox.center.orientation.z=0.
+            det.bbox.center.orientation.w=0.
             det.bbox.size.x=track.mean[3]
             det.bbox.size.y=track.mean[4]
             det.bbox.size.z=track.mean[5]
