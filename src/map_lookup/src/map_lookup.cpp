@@ -37,6 +37,7 @@ class MapLookup : public rclcpp::Node
 			this->declare_parameter("synchronised", false);
 
 			this->declare_parameter("map_server", "/map_server/map");
+			this->declare_parameter("map_refresh_time", 5);
 
 			this->declare_parameter("debug", false);
 
@@ -49,15 +50,10 @@ class MapLookup : public rclcpp::Node
 			mapPub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(this->get_parameter("output_map_topic").as_string(), 10);
 			tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 			transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-			mapClient_ = this->create_client<nav_msgs::srv::GetMap>(this->get_parameter("map_server").as_string());
 			
-			while(!mapClient_->wait_for_service(std::chrono::seconds(3))){
-				if (!rclcpp::ok()) {
-					RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-					return;
-				}
-				RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
-			}
+			mapClient_ = this->create_client<nav_msgs::srv::GetMap>(this->get_parameter("map_server").as_string());
+			map_refresh = this->get_parameter("map_refresh_time").as_int();
+
 			RCLCPP_INFO(this->get_logger(), "Map lookup node has started.");
 		}
     void setMap(nav_msgs::msg::OccupancyGrid map){
@@ -68,7 +64,10 @@ class MapLookup : public rclcpp::Node
     	map_->info=map.info;
     	map_->data=map.data;
     }
-	rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr mapClient_{nullptr};
+    rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr mapClient_{nullptr};
+    
+    int map_refresh;
+    bool debug;
 
   private:
     void bbox_callback(const visualization_msgs::msg::MarkerArray::SharedPtr msg)
@@ -193,9 +192,9 @@ class MapLookup : public rclcpp::Node
     std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_{nullptr};
     std::shared_ptr<nav_msgs::msg::OccupancyGrid> map_{nullptr};
+    rclcpp::TimerBase::SharedPtr timer_{nullptr};
 
     bool synchronised;
-	bool debug;
 };
 
 
@@ -212,20 +211,28 @@ int main(int argc, char ** argv)
       RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
       return 0;
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    if (node->debug)
+    	RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
   }
   rclcpp::sleep_for(std::chrono::seconds(1));
-  auto result = client->async_send_request(request);
-  // Wait for the result.
-  if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS){
-    RCLCPP_INFO(node->get_logger(), "Map recieved.");
-    node->setMap(result.get()->map);
+  while (rclcpp::ok())
+  {
+  	auto result = client->async_send_request(request);
+  	if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS)
+  	{
+  		if (node->debug)
+    			RCLCPP_INFO(node->get_logger(), "Map recieved.");
+    		node->setMap(result.get()->map);
 	} 
-	else {
-    RCLCPP_ERROR(node->get_logger(), "Failed to call service GetMap");
-    return 1;
-  }
-  rclcpp::spin(node);
+	else 
+	{
+    		RCLCPP_ERROR(node->get_logger(), "Failed to call service GetMap");
+    		return 1;
+  	}
+  	std::promise<void> ready_promise;
+  	std::shared_future<void> res(ready_promise.get_future());
+  	rclcpp::spin_until_future_complete(node, res, std::chrono::seconds(node->map_refresh));
+  } 
   rclcpp::shutdown();
   return 0;
 }
