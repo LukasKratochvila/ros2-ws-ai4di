@@ -20,13 +20,26 @@ class TrackerNode(Node):
         self.declare_parameter("output_det_topic", "/kalman_det")
         self.declare_parameter("dim", 3)
         self.declare_parameter("model_path", None)
-        
+        self.declare_parameter("metric", "euclidean")
+        self.declare_parameter("matching_threshold", 0.2)
+        self.declare_parameter("budget", 10)
+        self.declare_parameter("max_iou_distance", 1.0)
+        self.declare_parameter("max_age", 30)
+        self.declare_parameter("n_init", 1)
+
         self.declare_parameter("debug", False)
 
         self._input_det_topic = self.get_parameter("input_det_topic")._value
         self._output_det_topic = self.get_parameter("output_det_topic")._value
         self._dim = self.get_parameter("dim")._value
         self._model_path = self.get_parameter("model_path")._value
+
+        self._metric = self.get_parameter("metric")._value
+        self._matching_threshold = self.get_parameter("matching_threshold")._value
+        self._budget = self.get_parameter("budget")._value
+        self._max_iou_distance = self.get_parameter("max_iou_distance")._value
+        self._max_age = self.get_parameter("max_age")._value
+        self._n_init = self.get_parameter("n_init")._value
 
         
         self.debug = self.get_parameter("debug")._value
@@ -47,12 +60,14 @@ class TrackerNode(Node):
         else:
             self.get_logger().error('Tracker node got wrong dimension parameter - Stopping')
             return
-        
-        self.metric = NearestNeighborDistanceMetric("cosine", 0.2, None)
+        if self._metric not in ["cosine", "euclidean"]:
+            self.get_logger().error('Tracker node got wrong metric parameter - Stopping')
+            return 
+        self.metric = NearestNeighborDistanceMetric(self._metric, self._matching_threshold, self._budget)
         if self._dim == 2:
-            self.tracker = Tracker(self.metric,0.9,5)
+            self.tracker = Tracker(self.metric, self._max_iou_distance, self._max_age, self._n_init)
         else:
-            self.tracker = Tracker3D(self.metric,0.9,5)
+            self.tracker = Tracker3D(self.metric, self._max_iou_distance, self._max_age, self._n_init)
 
         self.get_logger().info('Tracker node has started.')
 
@@ -69,8 +84,8 @@ class TrackerNode(Node):
             if not self._model_path == None:
                 detections.append(Detection((dets[i,0],dets[i,1],dets[i,2],dets[i,3]), confs[i], cls[i], features[i]))
             else:
-                detections.append(Detection((int(det.bbox.center.x - det.bbox.size_x/2),
-                                             int(det.bbox.center.y - det.bbox.size_y/2),
+                detections.append(Detection((det.bbox.center.x - det.bbox.size_x/2,
+                                             det.bbox.center.y - det.bbox.size_y/2,
                                              det.bbox.size_x, det.bbox.size_y), det.results[0].score if len(det.results) > 0 else 0, det.results[0].id if len(det.results) > 0 else None,(i,i)))
         if self.debug:
             self.get_logger().info('Tracker_2D tracks # before: {}.'.format(len(self.tracker.tracks)))
@@ -102,13 +117,13 @@ class TrackerNode(Node):
     def _on_detections3D(self, detections_msg):
         detections=[]
         for i, det in zip(range(len(detections_msg.detections)),detections_msg.detections):
-            detections.append(Det3D((int(det.bbox.center.position.x - det.bbox.size.x/2),
-                                           int(det.bbox.center.position.y - det.bbox.size.y/2),
-                                           int(det.bbox.center.position.z - det.bbox.size.z/2),
+            detections.append(Det3D((det.bbox.center.position.x - det.bbox.size.x/2,
+                                           det.bbox.center.position.y - det.bbox.size.y/2,
+                                           det.bbox.center.position.z - det.bbox.size.z/2,
                                            det.bbox.size.x,
                                            det.bbox.size.y,
                                            det.bbox.size.z),
-                                           det.results[0].score if len(det.results) > 0 else 0, det.results[0].id if len(det.results) > 0 else None, (i,i)))
+                                           det.results[0].score if len(det.results) > 0 else 0, det.results[0].id if len(det.results) > 0 else None, None))
         if self.debug:
             self.get_logger().info('Tracker_3D tracks # before: {}.'.format(len(self.tracker.tracks)))
         if self.debug:

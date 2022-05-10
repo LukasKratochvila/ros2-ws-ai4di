@@ -257,8 +257,8 @@ class KalmanFilter3D(object):
         # Motion and observation uncertainty are chosen relative to the current
         # state estimate. These weights control the amount of uncertainty in
         # the model. This is a bit hacky.
-        self._std_weight_position = 1. / 100 #1. / 20
-        self._std_weight_velocity = 1. / 1000 #1. / 160
+        self._std_weight_position = 1. / 10 #1. / 20
+        self._std_weight_velocity = 1. / 80 #1. / 160
 
     def initiate(self, measurement):
         """Create track from unassociated measurement.
@@ -379,7 +379,7 @@ class KalmanFilter3D(object):
         covariance : ndarray
             The state's covariance matrix (12x12 dimensional).
         measurement : ndarray
-            The 4 dimensional measurement vector (x, y, z, w, h, l), where (x, y)
+            The 4 dimensional measurement vector (x, y, z, w, h, l), where (x, y, z)
             is the center position, w the width, h the height, and l the lenght of the
             bounding box.
 

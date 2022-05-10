@@ -81,7 +81,7 @@ class Detection3D(object):
         self.tlwh = np.asarray(tlwh, dtype=np.float)
         self.confidence = float(confidence)
         self.cls = cls
-        self.feature = np.asarray(feature, dtype=np.float32)
+        self.feature = np.asarray(feature, dtype=np.float32) if feature is not None else []
 
     def to_tlbr(self):
         """Convert bounding box to format `(min x, min y, min z, max x, max y, max z)`, i.e.,
