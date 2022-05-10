@@ -104,13 +104,13 @@ pcl_preprocessing_node:
 
 clustering_node:
   ros__parameters:
-    cluster_tolerance: 0.15 #in meters
-    min_cluster_size: 70
+    cluster_tolerance: 0.2 #in meters
+    min_cluster_size: 30
     max_cluster_size: 5000
-    step: 30
     input_topic: "/pcl_preprocessing_node/filteredPcl"
     output_topic: "~/detections_clusters"
     OBB: true
+    step: 30
     debug: false
 
 map_lookup_node:
@@ -159,6 +159,12 @@ tracker_2d_node:
     output_det_topic: '~/detections_tracker'
     dim: 2
     model_path: "model/tracker-mars-small128.pb"
+    metric: "euclidean"
+    matching_threshold: 0.2
+    budget: 10
+    max_iou_distance: 0.9
+    max_age: 30
+    n_init: 3
     debug: false
 tracker_3d_node:
   ros__parameters:
@@ -166,6 +172,12 @@ tracker_3d_node:
     output_det_topic: '~/detections_tracker'
     dim: 3
     model_path: None
+    metric: "euclidean"
+    matching_threshold: 0.2
+    budget: 10
+    max_iou_distance: 0.9
+    max_age: 3
+    n_init: 3
     debug: false
     
 viz_2d_yolo:
@@ -210,16 +222,17 @@ viz_3d_clusters:
     input_det3d_topic: '/clustering_node/detections_clusters'
     output_topic: '~/dbg_markers'
     debug: false
-viz_3d_matcher:
-  ros__parameters:
-    input_det3d_topic: '/detection_matcher_node/matched_detections'
-    output_topic: '~/dbg_markers'
-    debug: false
 viz_3d_tracker:
   ros__parameters:
     input_det3d_topic: '/tracker_3d_node/detections_tracker'
     output_topic: '~/dbg_markers'
     debug: false
+viz_3d_matcher:
+  ros__parameters:
+    input_det3d_topic: '/detection_matcher_node/matched_detections'
+    output_topic: '~/dbg_markers'
+    debug: false
+
 
 
 #map server should be configured mostly correctly, see:

@@ -237,11 +237,11 @@ def generate_launch_description():
     ld.add_action(clustering_node)
     #ld.add_action(map_lookup_node)
     #ld.add_action(projection_node)
-    ld.add_action(detector_node)
+    #ld.add_action(detector_node)
     #ld.add_action(detection_matcher_node)
     
     #ld.add_action(tracker_2d_node)
-    #ld.add_action(tracker_3d_node)
+    ld.add_action(tracker_3d_node)
 
     ld.add_action(viz_2d_yolo)
     #ld.add_action(viz_2d_projection)
@@ -249,7 +249,7 @@ def generate_launch_description():
     
     ld.add_action(viz_3d_clusters)
     #ld.add_action(viz_3d_matcher)
-    #ld.add_action(viz_3d_tracker)
+    ld.add_action(viz_3d_tracker)
     
     ld.add_action(map_server)
     ld.add_action(map_lifecycle_manager_cmd)
