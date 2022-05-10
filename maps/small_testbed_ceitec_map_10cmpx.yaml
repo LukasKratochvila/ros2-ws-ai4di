@@ -1,0 +1,7 @@
+image: "small_testbed_ceitec_map_10cmpx.pgm"
+resolution: 0.1 # raster image scale [m/pix]
+origin: [-5.88, -3.67, 0.00] # the costmap doesn't rotate with the map, only translation is respected https://github.com/ros-planning/navigation2/issues/1511
+occupied_thresh: 0.9
+free_thresh: 0.1
+negate: 0
+mode: "trinary"

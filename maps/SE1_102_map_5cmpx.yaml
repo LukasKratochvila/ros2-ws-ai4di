@@ -1,0 +1,7 @@
+image: "SE1_102_map_5cmpx.pgm"
+resolution: 0.0522 # raster image scale [m/pix]
+origin: [-8.179, -3.858, 0.00]
+occupied_thresh: 0.9
+free_thresh: 0.1
+negate: 0
+mode: "trinary"
