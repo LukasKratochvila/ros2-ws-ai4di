@@ -100,10 +100,15 @@ private:
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *cloud);
+    vision_msgs::msg::Detection3DArray output_det;
+    output_det.header = msg->header;
 
     // Dont have anything to process -> return
     if (!(*cloud).size())
+    {
+      detections_publisher_->publish(output_det);
       return;
+    }
 
     std::stringstream log;
     // Creating the KdTree object for the search method of the extraction
@@ -191,7 +196,7 @@ private:
 
         for(size_t angle_step=1; angle_step*step < 180; angle_step++){
           Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
-          transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(cos(angle_step*step/2),sin(angle_step*step/2),0,0));
+          transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(cos(step/2),sin(step/2),0,0));
 				  pcl::transformPointCloud(*cloud_cluster, *cloud_cluster, transform_rot);
 
           Clustering::Get_AABB_(cloud_cluster, &cluster_idx, &centerPoint, &minPoint, &maxPoint);
@@ -200,7 +205,6 @@ private:
             angle = angle_step*step;
             min_point = minPoint;
             max_point = maxPoint;
-            center_point = centerPoint;
           }
         }
 
@@ -224,7 +228,6 @@ private:
       log.clear();
     }
 
-    vision_msgs::msg::Detection3DArray output_det;
     size_t cnt = 0;
     for (size_t i = 0; i < cx.size(); i++)
     {
@@ -247,7 +250,6 @@ private:
 
       output_det.detections.push_back(det);
     }
-    output_det.header = output_det.detections[0].header;
     detections_publisher_->publish(output_det);
 
     if (debug)
