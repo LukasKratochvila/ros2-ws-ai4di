@@ -133,7 +133,10 @@ private:
 
     // Dont have anything to publish -> return
     if (!cluster_indices.size())
+    {
+      detections_publisher_->publish(output_det);
       return;
+    }
 
     std::vector<double> cx, cy, cz, dx, dy, dz, ox, oy, oz, ow;
 
@@ -276,50 +279,3 @@ int main(int argc, char *argv[])
   rclcpp::shutdown();
   return 0;
 }
-
-/*
-pcl::PointXYZ min_point_AABB, max_point_AABB, min_point, max_point, centerPoint, minPoint, maxPoint;
-      Eigen::Vector3f mass_center;
-      bool is_valid;
-
-      pcl::MomentOfInertiaEstimation<pcl::PointXYZ> feature_extractor;
-      for (pcl::PointIndices &it : cluster_indices)
-      {
-        Clustering::Get_AABB_(cloud, &it.indices, &centerPoint, &minPoint, &maxPoint);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
-        for (const auto &idx : it.indices)
-          cloud_cluster->push_back((*cloud)[idx]);
-
-        feature_extractor.setInputCloud(cloud_cluster);
-        feature_extractor.compute();
-
-        feature_extractor.getAABB(min_point_AABB, max_point_AABB);
-        is_valid = feature_extractor.getMassCenter(mass_center);
-        if (debug)
-        {
-          log << "Computed OBB:: is valid?: " << is_valid << std::endl
-              << "mass_center: " << mass_center << std::endl;
-          RCLCPP_INFO(this->get_logger(), log.str());
-          log.clear();
-        }
-        double angle = 0;
-        double surface_area = (max_point_AABB.x - min_point_AABB.x) * (max_point_AABB.y - min_point_AABB.y);
-        min_point = min_point_AABB;
-        max_point = max_point_AABB;
-
-        for(size_t angle_step=1; angle_step*step < 180; angle_step++){
-          Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
-          transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(cos(angle_step*step/2),sin(angle_step*step/2),0,0));
-				  pcl::transformPointCloud(*cloud_cluster, *cloud_cluster, transform_rot);
-
-          feature_extractor.setInputCloud(cloud_cluster);
-          feature_extractor.compute();
-          feature_extractor.getAABB(min_point_AABB, max_point_AABB);
-          if ((max_point_AABB.x - min_point_AABB.x) * (max_point_AABB.y - min_point_AABB.y) < surface_area){
-            surface_area = (max_point_AABB.x - min_point_AABB.x) * (max_point_AABB.y - min_point_AABB.y);
-            angle=angle_step*step;
-            min_point = min_point_AABB;
-            max_point = max_point_AABB;
-          }
-        }
-        */
