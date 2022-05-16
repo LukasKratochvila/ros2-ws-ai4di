@@ -36,6 +36,15 @@ def generate_launch_description():
         name='clustering_node',
         parameters=[configured_params],
         remappings=remappings)
+    map_lifecycle_manager_cmd = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager',
+            output='screen',
+            emulate_tty=True,
+            parameters=[{'autostart': True},
+                        {'use_sim_time': True},
+                        {'node_names': pcl_preprocessing_node}])
 
     ld = LaunchDescription()
 
@@ -43,5 +52,7 @@ def generate_launch_description():
 
     ld.add_action(pcl_preprocessing_node)
     ld.add_action(clustering_node)
+
+    ld.add_action(map_lifecycle_manager_cmd)
 
     return ld
