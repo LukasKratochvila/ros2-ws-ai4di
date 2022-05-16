@@ -197,6 +197,14 @@ private:
         max_point = maxPoint;
         center_point = centerPoint;
 
+        // subract mean value for correct rotation
+        for (const auto &idx : cluster_idx)
+        {
+          (*cloud_cluster)[idx].x -= center_point.x;
+          (*cloud_cluster)[idx].y -= center_point.y;
+          (*cloud_cluster)[idx].z -= center_point.z;
+        }
+
         for(size_t angle_step=1; angle_step*step < 180; angle_step++){
           Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
           transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(cos(step/2),sin(step/2),0,0));
