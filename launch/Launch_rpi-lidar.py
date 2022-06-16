@@ -16,6 +16,16 @@ def generate_launch_description():
         convert_types=True)        
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
+
+    tf_cloud_to_top_plate = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0.2','-0.1','0','0','0','0','loki_1_top_plate_link','cloud']
+        )
+    tf_image_to_cloud = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['-0.030','0.045','0','0','{}'.format(-5/180*3.14),'0','cloud','image'])
     
     livox_node = Node(
         package='livox_ros2_driver',
@@ -45,6 +55,9 @@ def generate_launch_description():
             parameters=[configured_params])
 
     ld = LaunchDescription()
+
+    ld.add_action(tf_cloud_to_top_plate)
+    ld.add_action(tf_image_to_cloud)
 
     ld.add_action(livox_node)
 
