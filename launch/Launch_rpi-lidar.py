@@ -49,7 +49,7 @@ def generate_launch_description():
     map_lifecycle_manager_cmd = Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
-            name='lifecycle_manager',
+            name='lifecycle_manager_lidar',
             output='screen',
             emulate_tty=True,
             parameters=[configured_params])

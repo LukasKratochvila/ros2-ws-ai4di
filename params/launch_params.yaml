@@ -235,7 +235,7 @@ viz_3d_matcher:
     output_topic: '~/dbg_markers'
     debug: false
 
-lifecycle_manager:
+lifecycle_manager_lidar:
   ros__parameters:
     autostart: True
     use_sim_time: True
