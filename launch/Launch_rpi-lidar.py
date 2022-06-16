@@ -42,9 +42,7 @@ def generate_launch_description():
             name='lifecycle_manager',
             output='screen',
             emulate_tty=True,
-            parameters=[{'autostart': True},
-                        {'use_sim_time': True},
-                        {'node_names': pcl_preprocessing_node}])
+            parameters=[configured_params])
 
     ld = LaunchDescription()
 

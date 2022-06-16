@@ -73,11 +73,16 @@ public:
 		declare_parameter("agg_window", 1e9);
 		declare_parameter("map_frame", "map");
 
+		declare_parameter("costmap_node_name", "pcl_preprocessing_costmap");
+		declare_parameter("local_costmap_namespace", "pcl_preprocessing_costmap");
+
 		declare_parameter("debug", false);
 
 		// The costmap node is used in the implementation of the node
 		costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-			"local_costmap", std::string{get_namespace()}, "local_costmap");
+			get_parameter("costmap_node_name").as_string(), 
+			std::string{get_namespace()}, 
+			get_parameter("local_costmap_namespace").as_string());
 		// Launch a thread to run the costmap node
 		costmap_thread_ = std::make_unique<nav2_util::NodeThread>(costmap_ros_);
 	}
