@@ -25,8 +25,8 @@ source install/setup.bash
 ```
 # Overview
 <p align="center">
-  <img height="600" src="doc/Overview.png" />
-  <img height="600" src="doc/Structure.png" />
+  <img height="600" src="doc/AI4DI.jpg" />
+  <img height="600" src="doc/AI4DI-reduced.jpg" />
 </p>
 
 ## Packages
