@@ -65,6 +65,10 @@ class Projection : public rclcpp::Node
   private:
     void topic_callback(const visualization_msgs::msg::MarkerArray::ConstSharedPtr detections) const
     {
+      if (detections->markers.size()== 0)
+      {
+        return;
+      } 
       std::string fromFrameRel = detections->markers.at(0).header.frame_id;
       std::string toFrameRel = output_frame;
       geometry_msgs::msg::TransformStamped transformStamped;

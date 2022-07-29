@@ -25,6 +25,9 @@ class ImgPublisher(Node):
          self.dir = self.get_parameter("input_dir")._value
          self.file_ext = self.get_parameter("file_ext")._value
          self.counter = self.get_parameter("start_counter")._value
+         
+         self.files = [file for file in os.listdir(self.dir) if file.split(".")[-1] == self.file_ext]
+         self.files.sort()
 
          self.publisher = self.create_publisher(Image, self.get_parameter("output_topic")._value, 10)
          self.frame_id = self.get_parameter("frame_id")._value

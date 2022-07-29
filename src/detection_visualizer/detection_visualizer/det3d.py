@@ -96,16 +96,12 @@ class Det3dVisualizerNode(Node):
             counter += 1
             marker.type = Marker.CUBE
             marker.action = Marker.ADD
-            
             marker.pose = detection.bbox.center
-            
             marker.scale = detection.bbox.size
-            
             c=create_unique_color_float(int(detection.tracking_id))
-
             marker.color.a, marker.color.r, marker.color.g, marker.color.b = 0.6, c[0], c[1], c[2]
             
-            detVizmsg.markers.append(marker);
+            detVizmsg.markers.append(marker)
 
             text = Marker()
             text.header = detections_msg.header
@@ -113,13 +109,10 @@ class Det3dVisualizerNode(Node):
             counter += 1
             text.type = Marker.TEXT_VIEW_FACING
             text.action = Marker.ADD
-            
-            text.text = "ID: {}\nClass: {}\nProb: {:.1f}".format(detection.tracking_id, max_class, max_score)
-            
+            text.text = "ID: {}\nClass: {}\nProb: {:.1f}".format(detection.tracking_id, max_class, max_score)            
             text.pose = detection.bbox.center
             
-            text.scale.x, text.scale.y, text.scale.z = 0.2, 0.2, 0.2
-            
+            text.scale.x, text.scale.y, text.scale.z = 0.2, 0.2, 0.2           
             text.color.a, text.color.r, text.color.g, text.color.b = 0.6, 0.7, 0.7, 0.7
             
             detVizmsg.markers.append(text)
