@@ -43,7 +43,7 @@ class ImgPublisher(Node):
                self.get_logger().info("Read directory {} with {} files.".format(self.dir, len(self.files)))
 
          self.bridge = CvBridge()
-         self.get_logger().info("Pcl_pub_py has started.")
+         self.get_logger().info("Img_pub_py has started.")
 
       def timer_callback(self):
           if self.counter > len(self.files)-1:

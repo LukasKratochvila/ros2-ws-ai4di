@@ -57,7 +57,7 @@ class PclPublisher : public rclcpp::Node
       pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
       sensor_msgs::msg::PointCloud2::SharedPtr msg (new sensor_msgs::msg::PointCloud2());
 
-      if (pcl_counter_ > files_.max_size()-1) pcl_counter_ = 0;
+      if (pcl_counter_ > files_.size()-1) pcl_counter_ = 0;
       
       if (pcl::io::loadPCDFile<pcl::PointXYZ> (files_.at(pcl_counter_), *cloud) == -1)
         PCL_ERROR("Couldn't read file %s!", files_.at(pcl_counter_).c_str());
