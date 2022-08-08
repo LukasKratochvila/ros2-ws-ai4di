@@ -21,7 +21,6 @@
 #include <vision_msgs/msg/detection3_d_array.hpp>
 
 #include <cv_bridge/cv_bridge.h>
-//#include <sensor_msgs/image_encodings.h>
 
 #include <cmath>
 
@@ -61,10 +60,14 @@ class Projection : public rclcpp::Node
 
       std::stringstream ss;
       if (debug)
+      {
         ss << std::endl << "K = " << std::endl << K  << std::endl << "DistCoefs = " << std::endl << D << std::endl;
+        RCLCPP_INFO(this->get_logger(), ss.str());
+        ss.clear();
+      }
       ss << "Projection has started.";
-
       RCLCPP_INFO(this->get_logger(), ss.str());
+      ss.clear();
     }
 
   private:
@@ -78,63 +81,74 @@ class Projection : public rclcpp::Node
       std::string toFrameRel = output_frame;
       geometry_msgs::msg::TransformStamped transformStamped;
       try {
-        transformStamped = tf_buffer_->lookupTransform(
-        toFrameRel, fromFrameRel, tf2::TimePointZero);
-        //RCLCPP_INFO(get_logger(), "Transform %s to %s is: RX: %0.4f, RY: %0.4f, RZ: %0.4f TX: %0.4f, TY: %0.4f, TZ: %0.4f", toFrameRel.c_str(), fromFrameRel.c_str(), transformStamped.transform.rotation.x,transformStamped.transform.rotation.y, transformStamped.transform.rotation.z, transformStamped.transform.translation.x, transformStamped.transform.translation.y, transformStamped.transform.translation.z);
-      }
+        transformStamped = tf_buffer_->lookupTransform(toFrameRel, fromFrameRel, tf2::TimePointZero);
+        }
       catch (tf2::TransformException & ex) {
-        RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+        RCLCPP_WARN(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
       }
       std::stringstream ss;
       if (debug){
-        ss << detections->detections.size() << std::endl;
+        ss << "Got detections number:" << detections->detections.size() << std::endl;
         RCLCPP_INFO(get_logger(),ss.str());
         ss.clear();
       }
       
-      //tf2::Transform trans(transformStamped.transform.rotation);
       // Transform to image frame
-      
       vision_msgs::msg::Detection3DArray trans_det = vision_msgs::msg::Detection3DArray();
+      trans_det.header=detections->header;
       vision_msgs::msg::Detection3D det;
       geometry_msgs::msg::PoseStamped pose;
       for(size_t i = 0; i < detections->detections.size(); i++) { 
         det = detections->detections.at(i);
         pose.header=det.header;
         pose.pose=det.bbox.center;
-        //marker_pose = tf_buffer_->transform(marker_pose,"image");
         tf2::doTransform(pose,pose,transformStamped);
         det.bbox.center=pose.pose;
         trans_det.detections.push_back(det);
+      }
+      if (debug){
+        ss << "Transformed detections number:" << trans_det.detections.size() << std::endl;
+        RCLCPP_INFO(get_logger(),ss.str());
+        ss.clear();
       }
       
       cv::Mat rVec = (cv::Mat_<double>(3,1) << 0, 0, 0);
       cv::Mat tVec = (cv::Mat_<double>(3,1) << 0, 0, 0);
 
-      std::vector<cv::Point3d> objectPoints;
+      std::vector<cv::Point3f> objectPoints;
       std::vector<cv::String> objectStrings;
+      std::vector<cv::Point2f> projectedPoints;
+      std::vector<cv::Rect> rectangles;
+      std::vector<cv::Point2f> centers;
       for(size_t i = 0; i < trans_det.detections.size(); i++) { 
         auto pt = trans_det.detections.at(i);
+
         objectStrings.push_back(pt.tracking_id);
-        objectPoints.push_back(cv::Point3d(-pt.bbox.center.position.y, -pt.bbox.center.position.z, pt.bbox.center.position.x));
-        objectPoints.push_back(cv::Point3d(-(pt.bbox.center.position.y - pt.bbox.size.y/2), -(pt.bbox.center.position.z - pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
-        //objectPoints.push_back(cv::Point3d(-(pt.pose.position.y + pt.scale.y/2), -(pt.pose.position.z - pt.scale.z/2), (pt.pose.position.x - pt.scale.x/2)));
-        objectPoints.push_back(cv::Point3d(-(pt.bbox.center.position.y + pt.bbox.size.y/2), -(pt.bbox.center.position.z + pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
-        //objectPoints.push_back(cv::Point3d(-(pt.pose.position.y - pt.scale.y/2), -(pt.pose.position.z + pt.scale.z/2), (pt.pose.position.x - pt.scale.x/2)));
+        // x pointing from image to forward so we move it to z coordinate
+        // and take oposite value from y and z
+        objectPoints.push_back(cv::Point3f(-pt.bbox.center.position.y, -pt.bbox.center.position.z, pt.bbox.center.position.x));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y - pt.bbox.size.y/2), -(pt.bbox.center.position.z - pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y - pt.bbox.size.y/2), -(pt.bbox.center.position.z - pt.bbox.size.z/2), (pt.bbox.center.position.x + pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y + pt.bbox.size.y/2), -(pt.bbox.center.position.z - pt.bbox.size.z/2), (pt.bbox.center.position.x + pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y - pt.bbox.size.y/2), -(pt.bbox.center.position.z + pt.bbox.size.z/2), (pt.bbox.center.position.x + pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y + pt.bbox.size.y/2), -(pt.bbox.center.position.z + pt.bbox.size.z/2), (pt.bbox.center.position.x + pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y + pt.bbox.size.y/2), -(pt.bbox.center.position.z + pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y - pt.bbox.size.y/2), -(pt.bbox.center.position.z + pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
+        objectPoints.push_back(cv::Point3f(-(pt.bbox.center.position.y + pt.bbox.size.y/2), -(pt.bbox.center.position.z - pt.bbox.size.z/2), (pt.bbox.center.position.x - pt.bbox.size.x/2)));
+        cv::projectPoints(objectPoints, rVec, tVec, K, D, projectedPoints);
+        centers.push_back(projectedPoints.at(0));
+        rectangles.push_back(cv::boundingRect(projectedPoints));
+        objectPoints.clear();
+        projectedPoints.clear();
       }
-      std::vector<cv::Point2d> projectedPoints;
-      cv::projectPoints(objectPoints, rVec, tVec, K, D, projectedPoints);
 
       if (debug){
         cv::Mat img(480, 640, CV_8UC3, CV_RGB(255, 255, 255));
         for(size_t i = 0; i < objectStrings.size(); i++){
-          cv::circle(img, cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), 5, CV_RGB(255,0,0));
-          cv::putText(img, objectStrings.at(i),cv::Point2d(projectedPoints.at(3*i).x,projectedPoints.at(3*i).y), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0,255,0));
-          cv::rectangle(img, cv::Rect2d(cv::Point2d(projectedPoints.at(3*i+1).x,projectedPoints.at(3*i+1).y),cv::Point2d(projectedPoints.at(3*i+2).x,projectedPoints.at(3*i+2).y)),CV_RGB(0,0,255));
+          cv::circle(img, centers.at(i), 5, CV_RGB(255,0,0));
+          cv::putText(img, objectStrings.at(i), centers.at(i), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0,255,0));
+          cv::rectangle(img, rectangles.at(i), CV_RGB(0,0,255));
         }
-        //ss << projectedPoints;
-        RCLCPP_INFO(get_logger(),ss.str());
-        ss.clear();
 
         cv_bridge::CvImage out_msg;
         out_msg.image = img;
@@ -152,6 +166,7 @@ class Projection : public rclcpp::Node
       for (size_t i = 0; i < objectStrings.size(); ++i) {
         detect->detections.emplace_back();
         auto & detection_ros = detect->detections.back();
+        detection_ros.header = detect->header;
 
         // Copy probabilities of each class
         //for (int cls = 0; cls < detection.classes; ++cls) {
@@ -172,12 +187,17 @@ class Projection : public rclcpp::Node
         dis.score = -sqrt(pow(trans_det.detections.at(i).bbox.center.position.x,2)+pow(trans_det.detections.at(i).bbox.center.position.y,2)+pow(trans_det.detections.at(i).bbox.center.position.z,2));
         
         // Copy bounding box, darknet uses center of bounding box too
-        detection_ros.bbox.center.x = (projectedPoints.at(3*i+2).x+projectedPoints.at(3*i+1).x)/2;
-        detection_ros.bbox.center.y = (projectedPoints.at(3*i+2).y+projectedPoints.at(3*i+1).y)/2;
-        detection_ros.bbox.size_x = projectedPoints.at(3*i+2).x-projectedPoints.at(3*i+1).x;
-        detection_ros.bbox.size_y = projectedPoints.at(3*i+2).y-projectedPoints.at(3*i+1).y;
+        detection_ros.bbox.center.x = static_cast<double>(centers.at(i).x);
+        detection_ros.bbox.center.y = static_cast<double>(centers.at(i).y);
+        detection_ros.bbox.size_x = static_cast<double>(rectangles.at(i).width);
+        detection_ros.bbox.size_y = static_cast<double>(rectangles.at(i).height);
       }
       publisher_->publish(*detect);
+      if (debug){
+        ss << "Published detections number:" << detect->detections.size();
+        RCLCPP_INFO(get_logger(),ss.str());
+        ss.clear();
+      }
     }
     rclcpp::Subscription<vision_msgs::msg::Detection3DArray>::SharedPtr det_subscription_{nullptr};
     rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr publisher_{nullptr};
