@@ -50,7 +50,7 @@ writer_node:
     start_pcl_counter: 0
     img_file_ext: "jpg"
     pcl_file_ext: "pcd"
-    debug: true
+    debug: false
 pcl_pub_node:
   ros__parameters:
     input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
@@ -83,7 +83,7 @@ pcl_preprocessing_node:
     detectFloor: false
     downSample: true
     mapCrop: true
-    enableAgg: false
+    enableAgg: true
     createLocalMap: false
     input_topic: "/livox/lidar"
     output_cloud_topic: "~/filteredPcl"
@@ -109,7 +109,7 @@ clustering_node:
     cluster_tolerance: 0.2 #in meters
     min_cluster_size: 30
     max_cluster_size: 5000
-    input_topic: "/pcl_preprocessing_node/filteredPcl"
+    input_topic: "/pcl_preprocessing_node/filteredPcl/agg"
     output_topic: "~/detections_clusters"
     OBB: true
     step: 30
@@ -126,11 +126,12 @@ map_lookup_node:
 
 projection_node:
   ros__parameters:
-    input_topic: "/clustering_node/detections"
+    input_topic: "/clustering_node/detections_clusters"
     output_topic: "~/projections"
-    output_pcl_topic: "~/pcl"
-    output_img_topic: "~/img"
+    dbg_img_topic: "~/img"
     output_frame: "image"
+    K: [531.7944, 0.0, 296.3159, 0.0, 530.179, 255.4285, 0.0, 0.0, 1.0]
+    D: [-0.4512, 0.7176, -0.0014, 0.0017, -1.2896]
     debug: false
 
 # open robotisc - yolo
@@ -143,6 +144,26 @@ detector_node:
     detection:
       threshold: 0.25
       nms_threshold: 0.45
+# yolov5
+detectorv5_node:
+  ros__parameters:
+#   weights: str(ROOT) + '/config/yolov5s.pt'
+#   data: str(ROOT) + '/data/coco128.yaml'
+    input_img_topic: "/detector_node/images"
+    output_det_topic: "/detector_node/detections"
+    imagez_height: 640
+    imagez_width: 640
+    conf_thres: 0.25
+    iou_thres: 0.45
+    max_det: 1000
+    device: 'cpu'
+    view_img: False
+#    classes: None
+    agnostic_nms: False
+    line_thickness: 2
+    half: False
+    dnn: False
+    processed_classes: ["person"]
       
 detection_matcher_node:
   ros__parameters:
@@ -151,8 +172,8 @@ detection_matcher_node:
     Detect3D_topic: "/clustering_node/detections_clusters"
     Output3D_topic: "~/matched_detections"
     queue_size: 100
-    time_toll: 0.1
-    tresh: 0.5
+    time_toll: 0.5
+    tresh: 0.9
     debug: false
 
 tracker_2d_node:
@@ -168,9 +189,22 @@ tracker_2d_node:
     max_age: 30
     n_init: 3
     debug: false
-tracker_3d_node:
+tracker_3d_node_clusters:
   ros__parameters:
     input_det_topic: '/clustering_node/detections_clusters'
+    output_det_topic: '~/detections_tracker'
+    dim: 3
+    model_path: None
+    metric: "euclidean"
+    matching_threshold: 0.2
+    budget: 10
+    max_iou_distance: 0.9
+    max_age: 3
+    n_init: 3
+    debug: false
+tracker_3d_node_matches:
+  ros__parameters:
+    input_det_topic: '/detection_matcher_node/matched_detections'
     output_det_topic: '~/detections_tracker'
     dim: 3
     model_path: None
@@ -199,7 +233,7 @@ viz_2d_projection:
     input_img_topic: '/detector_node/images'
     input_det2d_topic: '/projection_node/projections'
     output_topic: '~/dbg_images'
-    time_toll: 0.001
+    time_toll: 0.1
     queue_size: 100
     start_counter: 0
     encoding: "bgr8"
@@ -224,14 +258,19 @@ viz_3d_clusters:
     input_det3d_topic: '/clustering_node/detections_clusters'
     output_topic: '~/dbg_markers'
     debug: false
-viz_3d_tracker:
+viz_3d_tracker_clusters:
   ros__parameters:
-    input_det3d_topic: '/tracker_3d_node/detections_tracker'
+    input_det3d_topic: '/tracker_3d_node_clusters/detections_tracker'
     output_topic: '~/dbg_markers'
     debug: false
 viz_3d_matcher:
   ros__parameters:
     input_det3d_topic: '/detection_matcher_node/matched_detections'
+    output_topic: '~/dbg_markers'
+    debug: false
+viz_3d_tracker_matches:
+  ros__parameters:
+    input_det3d_topic: '/tracker_3d_node_matches/detections_tracker'
     output_topic: '~/dbg_markers'
     debug: false
 
