@@ -74,7 +74,7 @@ class TrackerNode(Node):
 
     def _on_detections2D(self, detections_msg):
         detections=[]
-        if not self._model_path == None:
+        if not self._model_path == None and len(detections_msg.detections) != 0:
             bgr_image = np.array(detections_msg.detections[0].source_img.data).reshape([detections_msg.detections[0].source_img.height, detections_msg.detections[0].source_img.width, 3]) # first detection has the source image
             #self.get_logger().info('Image shape {}.'.format(bgr_image.shape))
             dets=np.array([[int(det.bbox.center.x - det.bbox.size_x/2),int(det.bbox.center.y - det.bbox.size_y/2),det.bbox.size_x, det.bbox.size_y] for det in detections_msg.detections])
@@ -106,10 +106,12 @@ class TrackerNode(Node):
             det.bbox.center.y=track.mean[1]
             det.bbox.size_x=track.mean[2]*track.mean[3]
             det.bbox.size_y=track.mean[3]
-            hypothesis = ObjectHypothesisWithPose()
-            hypothesis.id = str(track.track_id) if track.cls == None else track.cls
-            hypothesis.score = track.confidence
-            det.results.append(hypothesis)
+            if track.cls != None:
+                hypothesis = ObjectHypothesisWithPose()
+                hypothesis.id = track.cls
+                hypothesis.score = track.confidence
+                det.results.append(hypothesis)
+            det.tracking_id=str(track.track_id)
             arr.detections.append(det)
         if self.debug:
             self.get_logger().info('Tracker_2D publishing.')
@@ -153,7 +155,12 @@ class TrackerNode(Node):
             det.bbox.size.x=track.mean[3]
             det.bbox.size.y=track.mean[4]
             det.bbox.size.z=track.mean[5]
-            det.tracking_id=str(track.track_id) if track.cls == None else track.cls
+            if track.cls != None:
+                hypothesis = ObjectHypothesisWithPose()
+                hypothesis.id = track.cls
+                hypothesis.score = track.confidence
+                det.results.append(hypothesis)
+            det.tracking_id=str(track.track_id)
             arr.detections.append(det)
         if self.debug:
             self.get_logger().info('Tracker_3D publishing.')

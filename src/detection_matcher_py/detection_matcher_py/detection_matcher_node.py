@@ -37,8 +37,6 @@ class DetectionMatcher(Node):
       
       self.sync_ = message_filters.ApproximateTimeSynchronizer((self.project2DSub_, self.detect2DSub_, self.detect3DSub_), self.queue_size, self.time_toll)
       self.sync_.registerCallback(self.syncCallback)
-      if (False):
-         self.detect3DSub_.registerCallback(self.sync3DCallback)
          
       self.output_qos = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, reliability=QoSReliabilityPolicy.RELIABLE, depth=1)
       self.detect3DPub_ = self.create_publisher(Detection3DArray, self.Output3D_topic, self.output_qos)
@@ -46,15 +44,15 @@ class DetectionMatcher(Node):
       self.get_logger().info("DetectionMatcher now running, looking for coresponding detections in " + self.Project2D_topic + ", " + self.Detect2D_topic + " and " + self.Detect3D_topic + " topics.")
     
    def IoU(self, bbox1center_x, bbox1size_x, bbox1center_y, bbox1size_y, bbox2center_x, bbox2size_x, bbox2center_y, bbox2size_y, tresh):
-      area1 = (bbox1size_x * bbox1size_y);
-      area2 = bbox2size_x * bbox2size_y;
+      area1 = (bbox1size_x * bbox1size_y)
+      area2 = bbox2size_x * bbox2size_y
         
-      distx = min(bbox1size_x/2 + bbox1center_x, bbox2size_x/2 + bbox2center_x) - max(bbox1size_x/2 - bbox1center_x, bbox2size_x/2 - bbox2center_x);
-      disty = min(bbox1size_y/2 + bbox1center_y, bbox2size_y/2 + bbox2center_y) - max(bbox1size_y/2 - bbox1center_y, bbox2size_y/2 - bbox2center_y);
+      distx = min(bbox1size_x/2 + bbox1center_x, bbox2size_x/2 + bbox2center_x) - max(bbox1size_x/2 - bbox1center_x, bbox2size_x/2 - bbox2center_x)
+      disty = min(bbox1size_y/2 + bbox1center_y, bbox2size_y/2 + bbox2center_y) - max(bbox1size_y/2 - bbox1center_y, bbox2size_y/2 - bbox2center_y)
         
-      areaI = distx * disty;
+      areaI = distx * disty
         
-      IoverU = areaI / (area1 + area2 - areaI);
+      IoverU = areaI / (area1 + area2 - areaI)
        
       if(IoverU < tresh):
          return 0
@@ -86,10 +84,12 @@ class DetectionMatcher(Node):
                                        detect.bbox.center.y,
                                        detect.bbox.size_y,
                                        self.tresh))
+         if len(candidates) == 0:
+            if self.debug:
+               self.get_logger().info("No candidate -> continue.")
+            continue
          if self.debug:
             self.get_logger().info("Max iou:{}".format(max(candidates)))
-         if max(candidates) == 0:
-            continue
          maxIoU = candidates.index(max(candidates))
          det = detect3Dmsg.detections[i]
          for res in detect2Dmsg.detections[maxIoU].results:
