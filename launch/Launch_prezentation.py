@@ -131,6 +131,12 @@ def generate_launch_description():
         name = 'detector_node',
         parameters=[configured_params],
         remappings=remappings)
+    detectorv5_node = Node(
+        package='yolov5_ros',
+        executable='yolov5_ros',
+        name = 'detectorv5_node',
+        parameters=[configured_params],
+        remappings=remappings)
     detection_matcher_node = Node(
         package='detection_matcher_py',
         executable='detection_matcher_node',
@@ -144,10 +150,16 @@ def generate_launch_description():
         name='tracker_2d_node',
         parameters=[configured_params],
         remappings=remappings)
-    tracker_3d_node = Node(
+    tracker_3d_node_clusters = Node(
         package='tracker',
         executable='tracker_node',
-        name='tracker_3d_node',
+        name='tracker_3d_node_clusters',
+        parameters=[configured_params],
+        remappings=remappings)
+    tracker_3d_node_matches = Node(
+        package='tracker',
+        executable='tracker_node',
+        name='tracker_3d_node_matches',
         parameters=[configured_params],
         remappings=remappings)
     
@@ -182,10 +194,16 @@ def generate_launch_description():
         name="viz_3d_matcher",
         parameters=[configured_params],
         remappings=remappings)
-    viz_3d_tracker = Node(
+    viz_3d_tracker_clusters = Node(
         package='detection_visualizer',
         executable='det3d_viz_node',
-        name="viz_3d_tracker",
+        name="viz_3d_tracker_clusters",
+        parameters=[configured_params],
+        remappings=remappings)
+    viz_3d_tracker_matches = Node(
+        package='detection_visualizer',
+        executable='det3d_viz_node',
+        name="viz_3d_tracker_matches",
         parameters=[configured_params],
         remappings=remappings)
 
@@ -236,20 +254,22 @@ def generate_launch_description():
     ld.add_action(pcl_preprocessing_node)
     ld.add_action(clustering_node)
     #ld.add_action(map_lookup_node)
-    #ld.add_action(projection_node)
-    #ld.add_action(detector_node)
-    #ld.add_action(detection_matcher_node)
+    ld.add_action(projection_node)
+    ld.add_action(detectorv5_node)
+    ld.add_action(detection_matcher_node)
     
-    #ld.add_action(tracker_2d_node)
-    ld.add_action(tracker_3d_node)
+    ld.add_action(tracker_2d_node)
+    ld.add_action(tracker_3d_node_clusters)
+    ld.add_action(tracker_3d_node_matches)
 
     ld.add_action(viz_2d_yolo)
-    #ld.add_action(viz_2d_projection)
-    #ld.add_action(viz_2d_tracker)
+    ld.add_action(viz_2d_projection)
+    ld.add_action(viz_2d_tracker)
     
     ld.add_action(viz_3d_clusters)
-    #ld.add_action(viz_3d_matcher)
-    ld.add_action(viz_3d_tracker)
+    ld.add_action(viz_3d_matcher)
+    ld.add_action(viz_3d_tracker_clusters)
+    ld.add_action(viz_3d_tracker_matches)
     
     ld.add_action(map_server)
     ld.add_action(map_lifecycle_manager_cmd)
