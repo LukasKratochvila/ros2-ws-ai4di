@@ -7,8 +7,7 @@ from rclpy.qos import QoSReliabilityPolicy
 
 import message_filters
 
-from vision_msgs.msg import Detection2DArray, Detection3DArray, Detection3D
-#from visualization_msgs.msg import MarkerArray
+from vision_msgs.msg import Detection2DArray, Detection3DArray
 
 class DetectionMatcher(Node):
    def __init__(self):
@@ -20,6 +19,7 @@ class DetectionMatcher(Node):
       self.declare_parameter("queue_size", 10)
       self.declare_parameter("time_toll", 10)
       self.declare_parameter("tresh", 0.9)
+      self.declare_parameter("only_match", True)  
       self.declare_parameter("debug", True)     
 
       self.Project2D_topic = self.get_parameter("Project2D_topic")._value
@@ -29,6 +29,7 @@ class DetectionMatcher(Node):
       self.queue_size = self.get_parameter("queue_size")._value
       self.time_toll = self.get_parameter("time_toll")._value
       self.tresh = self.get_parameter("tresh")._value
+      self.only_match = self.get_parameter("only_match")._value
       self.debug = self.get_parameter("debug")._value
       
       self.project2DSub_ = message_filters.Subscriber(self, Detection2DArray, self.Project2D_topic)
@@ -43,12 +44,12 @@ class DetectionMatcher(Node):
       
       self.get_logger().info("DetectionMatcher now running, looking for coresponding detections in " + self.Project2D_topic + ", " + self.Detect2D_topic + " and " + self.Detect3D_topic + " topics.")
     
-   def IoU(self, bbox1center_x, bbox1size_x, bbox1center_y, bbox1size_y, bbox2center_x, bbox2size_x, bbox2center_y, bbox2size_y, tresh):
-      area1 = (bbox1size_x * bbox1size_y)
-      area2 = bbox2size_x * bbox2size_y
+   def IoU(self, bbox1, bbox2, tresh):
+      area1 = (bbox1.size_x * bbox1.size_y)
+      area2 = (bbox2.size_x * bbox2.size_y)
         
-      distx = min(bbox1size_x/2 + bbox1center_x, bbox2size_x/2 + bbox2center_x) - max(bbox1size_x/2 - bbox1center_x, bbox2size_x/2 - bbox2center_x)
-      disty = min(bbox1size_y/2 + bbox1center_y, bbox2size_y/2 + bbox2center_y) - max(bbox1size_y/2 - bbox1center_y, bbox2size_y/2 - bbox2center_y)
+      distx = max(0,(min((bbox1.center.x + bbox1.size_x/2.0), (bbox2.center.x + bbox2.size_x/2.0)) - max((bbox1.center.x - bbox1.size_x/2.0), (bbox2.center.x - bbox2.size_x/2.0))))
+      disty = max(0,(min((bbox1.center.y + bbox1.size_y/2.0), (bbox2.center.y + bbox2.size_y/2.0)) - max((bbox1.center.y - bbox1.size_y/2.0), (bbox2.center.y - bbox2.size_y/2.0))))
         
       areaI = distx * disty
         
@@ -69,46 +70,50 @@ class DetectionMatcher(Node):
          
       outmsg = Detection3DArray()
       outmsg.header = detect3Dmsg.header
-      det = Detection3D()
+      # create list of ids for matching
+      ids=list()
+      for det in detect3Dmsg.detections:
+         ids.append(det.tracking_id)
 
       # IoU metric is applied across all YOLO and projections, individual maximums are selected
-      for i, project_det in zip(range(len(project2Dmsg.detections)), project2Dmsg.detections):
+      for project_det in project2Dmsg.detections:
          candidates = list()
          for detect in detect2Dmsg.detections:
-            candidates.append(self.IoU(project_det.bbox.center.x,
-                                       project_det.bbox.size_x,
-                                       project_det.bbox.center.y,
-                                       project_det.bbox.size_y,
-                                       detect.bbox.center.x,
-                                       detect.bbox.size_x,
-                                       detect.bbox.center.y,
-                                       detect.bbox.size_y,
-                                       self.tresh))
+            candidates.append(self.IoU(project_det.bbox, detect.bbox, self.tresh))
+         if self.debug:
+            self.get_logger().info("IOU:{}".format(candidates))
          if len(candidates) == 0:
             if self.debug:
-               self.get_logger().info("No candidate -> continue.")
+               self.get_logger().info("Projection #{} No candidate -> continue.".format(project_det.tracking_id))
             continue
-         if self.debug:
-            self.get_logger().info("Max iou:{}".format(max(candidates)))
-         maxIoU = candidates.index(max(candidates))
-         det = detect3Dmsg.detections[i]
-         for res in detect2Dmsg.detections[maxIoU].results:
+         if max(candidates) == 0:
+            if self.debug:
+               self.get_logger().info("Projection #{} All candidates has zero IOU -> continue.".format(project_det.tracking_id))
+            continue
+         maxIoU_index = candidates.index(max(candidates))
+         det3d_index = ids.index(project_det.tracking_id)
+
+         # Rewrite label to 3D detection
+         det = detect3Dmsg.detections[det3d_index]
+         for res in detect2Dmsg.detections[maxIoU_index].results:
             det.results.append(res)
+         # Add distance information
+         for res in project_det.results:
+            if res.id == "Distance":
+               det.results.append(res)
+
          outmsg.detections.append(det)
     
       # Only the classified boxes get republished as vision_msgs::msg::Detection3DArray
-      self.detect3DPub_.publish(outmsg)
+      if self.only_match:
+         self.detect3DPub_.publish(outmsg)
+      else:
+         self.detect3DPub_.publish(detect3Dmsg)
       if self.debug:
-         self.get_logger().info("Published detection3darray message.")
-    
-   def sync3DCallback(self, msg):
-   # When 3D detections come and are to be forwarded downstream (converts from MarkerArray to Detection3DArray)
-      if self.debug: 
-         self.get_logger().info("Processing one topic.")
-      # Republishes 3D clustering detections as vision_msgs::msg::Detection3DArray
-      self.detect3DPub_.publish(msg)
-      if self.debug: 
-         self.get_logger().info("Published detection3darray message.")
+         if self.only_match:
+            self.get_logger().info("Published {} detection3darray message.".format(len(outmsg.detections)))
+         else:
+            self.get_logger().info("Published {} detection3darray message.".format(len(detect3Dmsg.detections)))
 
 def main(args=None):
     rclpy.init(args=args)

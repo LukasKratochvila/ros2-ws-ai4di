@@ -109,11 +109,14 @@ class Det3dVisualizerNode(Node):
             counter += 1
             text.type = Marker.TEXT_VIEW_FACING
             text.action = Marker.ADD
-            text.text = "ID: {}\nClass: {}\nProb: {:.1f}".format(detection.tracking_id, max_class, max_score)            
+            if dis != 0.0:
+                text.text = "ID:̈́ {}\nClass: {}\nProb: {:.1f}\nDistance: {:.1f}m".format(int(detection.tracking_id), max_class, max_score, dis)  
+            else:
+                text.text = "ID: {}\nCl: {}\nPr: {:.1f}".format(int(detection.tracking_id), max_class, max_score)            
             text.pose = detection.bbox.center
             
             text.scale.x, text.scale.y, text.scale.z = 0.2, 0.2, 0.2           
-            text.color.a, text.color.r, text.color.g, text.color.b = 0.6, 0.7, 0.7, 0.7
+            text.color.a, text.color.r, text.color.g, text.color.b = 0.6, c[0], c[1], c[2] #0.6, 0.7, 0.7, 0.7
             
             detVizmsg.markers.append(text)
 

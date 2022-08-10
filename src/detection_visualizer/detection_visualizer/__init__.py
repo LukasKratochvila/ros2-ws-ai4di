@@ -104,13 +104,20 @@ class DetectionVisualizerNode(Node):
             thickness = 1
             cv2.rectangle(cv_image, min_pt, max_pt, color, thickness)
 
-            label = '{} {:.2f}'.format(max_class, max_score)
-            pos = (min_pt[0], max_pt[1])
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(cv_image, label, pos, font, 0.75, color, 1, cv2.LINE_AA)
-            label = '{} {:.1f}m'.format("Distance", dis)
-            pos = (min_pt[0], max_pt[1]+25)
-            cv2.putText(cv_image, label, pos, font, 0.75, color, 1, cv2.LINE_AA)
+            # Detection from detector or projector
+            if max_class != 'Unknown':
+                label = 'C:{} S:{:.2f}'.format(max_class, max_score)
+                pos = (min_pt[0], max_pt[1])
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(cv_image, label, pos, font, 0.75, color, 1, cv2.LINE_AA)
+            else:
+                label = 'ID:{} C:{}'.format(detection.tracking_id, max_class)
+                pos = (min_pt[0], max_pt[1])
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(cv_image, label, pos, font, 0.75, color, 1, cv2.LINE_AA)
+                label = '{} {:.1f}m'.format("Distance", dis)
+                pos = (min_pt[0], max_pt[1]+25)
+                cv2.putText(cv_image, label, pos, font, 0.75, color, 1, cv2.LINE_AA)
             
         msg=self._bridge.cv2_to_imgmsg(cv_image, encoding=self.encoding)
         msg.header=image_msg.header

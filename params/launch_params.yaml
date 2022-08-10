@@ -163,7 +163,7 @@ detectorv5_node:
     line_thickness: 2
     half: False
     dnn: False
-    processed_classes: ["person"]
+    processed_classes: ["person"] # put "all" for all classes
       
 detection_matcher_node:
   ros__parameters:
@@ -173,7 +173,8 @@ detection_matcher_node:
     Output3D_topic: "~/matched_detections"
     queue_size: 100
     time_toll: 0.5
-    tresh: 0.9
+    tresh: 0.2
+    only_match: true
     debug: false
 
 tracker_2d_node:

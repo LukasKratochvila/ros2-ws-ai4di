@@ -250,6 +250,9 @@ class yolov5_ros(Node):
                                 self.line_thickness,
                                 self.half,
                                 self.dnn)
+        if "all" in self.processed_classes:
+            self.processed_classes=self.yolov5.names
+        self.get_logger().info("Yolov5 is ready. Classes: {}".format(self.processed_classes))
 
     
     def yolovFive2bboxes_msgs(self, bboxes:list, scores:list, cls:list, img_header:Header):
