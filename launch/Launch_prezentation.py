@@ -275,10 +275,3 @@ def generate_launch_description():
     ld.add_action(map_lifecycle_manager_cmd)
 
     return ld
-    
-'''
-TODO:
-- doladit tracking
-- odriznuti v preprocessingu podle mapy
-- diagram - popsat uzly
-'''

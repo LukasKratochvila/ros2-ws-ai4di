@@ -93,8 +93,12 @@ class DetectionMatcher(Node):
          maxIoU_index = candidates.index(max(candidates))
          det3d_index = ids.index(project_det.tracking_id)
 
-         # Rewrite label to 3D detection
+         # Remove Unknown hypothesis
          det = detect3Dmsg.detections[det3d_index]
+         for res in detect3Dmsg.detections[det3d_index].results:
+            if res.id == "Unknown":
+               detect3Dmsg.detections[det3d_index].results.remove(res)
+         # Rewrite label to 3D detection
          for res in detect2Dmsg.detections[maxIoU_index].results:
             det.results.append(res)
          # Add distance information

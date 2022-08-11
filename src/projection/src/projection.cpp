@@ -167,25 +167,9 @@ class Projection : public rclcpp::Node
         detect->detections.emplace_back();
         auto & detection_ros = detect->detections.back();
         detection_ros.header = detect->header;
-
-        // Copy probabilities of each class
-        //for (int cls = 0; cls < detection.classes; ++cls) {
-        //  if (detection.prob[cls] > 0.0f) {
-        //    detection_ros.results.emplace_back();
-        //    auto & hypothesis = detection_ros.results.back();
-        //    hypothesis.id = impl_->class_names_.at(cls);
-        //    hypothesis.score = detection.prob[cls];
-        //  }
-        //}
-        detection_ros.results.emplace_back();
-        auto & hypothesis = detection_ros.results.back();
-        hypothesis.id = "Unknown";
-        hypothesis.score = 0;
-        detection_ros.results.emplace_back();
-        auto & dis = detection_ros.results.back();
-        dis.id = "Distance";
-        dis.score = -sqrt(pow(trans_det.detections.at(i).bbox.center.position.x,2)+pow(trans_det.detections.at(i).bbox.center.position.y,2)+pow(trans_det.detections.at(i).bbox.center.position.z,2));
-        
+        for (size_t j = 0; j < detect->detections.at(i).results.size(); ++j) {
+          detection_ros.results.push_back(detect->detections.at(i).results.at(j));
+        }        
         // Copy bounding box, darknet uses center of bounding box too
         detection_ros.bbox.center.x = static_cast<double>(centers.at(i).x);
         detection_ros.bbox.center.y = static_cast<double>(centers.at(i).y);

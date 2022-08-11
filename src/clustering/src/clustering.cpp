@@ -231,6 +231,15 @@ private:
       det.bbox.size.y = dy.at(i);
       det.bbox.size.z = dz.at(i);
 
+      det.results.emplace_back();
+      auto & hypothesis = det.results.back();
+      hypothesis.id = "Unknown";
+      hypothesis.score = 0;
+      det.results.emplace_back();
+      auto & dis = det.results.back();
+      dis.id = "Distance";
+      dis.score = -sqrt(pow(cx.at(i),2)+pow(cy.at(i),2)+pow(cz.at(i),2));
+
       output_det.detections.push_back(det);
     }
     detections_publisher_->publish(output_det);
