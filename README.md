@@ -59,3 +59,4 @@ Here is credit for the non-original packages:
 - livox_ros2_driver - https://github.com/Livox-SDK/livox_ros2_driver
 - openrobotics_darknet_ros - https://github.com/ros2/openrobotics_darknet_ros
 - tracker - https://github.com/nwojke/deep_sort
+- yoloc5_ros - https://github.com/Ar-Ray-code/YOLOv5-ROS
