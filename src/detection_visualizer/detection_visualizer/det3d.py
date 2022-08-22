@@ -76,8 +76,14 @@ class Det3dVisualizerNode(Node):
         if self.debug:
             self.get_logger().info("Recieved 3D detections.")
         detVizmsg = MarkerArray()
-        counter = 0
-        
+        counter = 1
+        # Clear all markers
+        marker = Marker()
+        marker.id = 0
+        marker.action = Marker.DELETEALL
+        detVizmsg.markers.append(marker)
+
+
         for detection in detections_msg.detections:
             marker = Marker()
             max_class = None
@@ -100,6 +106,7 @@ class Det3dVisualizerNode(Node):
             marker.scale = detection.bbox.size
             c=create_unique_color_float(int(detection.tracking_id))
             marker.color.a, marker.color.r, marker.color.g, marker.color.b = 0.6, c[0], c[1], c[2]
+            #marker.lifetime = rclpy.duration.Duration(seconds=0.05)
             
             detVizmsg.markers.append(marker)
 
