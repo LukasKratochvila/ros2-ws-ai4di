@@ -39,6 +39,8 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/voxel_grid.h>
 
+#include <pcl/common/transforms.h>
+
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 
@@ -166,12 +168,12 @@ protected:
 private:
 	void lidar_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 	{
-
-		pcl::PCLPointCloud2 cloud_pc2;
+		// pcl::PCLPointCloud2 cloud_pc2;
 		// pcl_conversions::toPCL(*msg, cloud_pc2);
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 		// pcl::fromPCLPointCloud2(cloud_pc2,*cloud);
 		pcl::fromROSMsg(*msg, *cloud);
+
 
 		// Cloud cropping
 		if (crop)
@@ -241,6 +243,29 @@ private:
 			}
 		}
 
+		// Get transform from current cloud to map for cloud transform
+		std::string fromFrameRel = msg->header.frame_id;
+		std::string toFrameRel = mapFrame;
+		getMap = true;
+		try
+		{
+			transformStampedToMap = tf_buffer_->lookupTransform(
+				toFrameRel, fromFrameRel, tf2_ros::fromMsg(msg->header.stamp));
+			if (debug)
+				RCLCPP_INFO(get_logger(), "Transforming to %s from %s.", toFrameRel.c_str(), fromFrameRel.c_str());
+		}
+		catch (tf2::TransformException &ex)
+		{
+			RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", fromFrameRel.c_str(), toFrameRel.c_str(), ex.what());
+			getMap = false;
+		}
+		if (getMap)
+		{
+			pcl::toROSMsg(*cloud, *msg);
+			tf2::doTransform(*msg, *msg, transformStampedToMap); // Transform cloud into the map frame
+			pcl::fromROSMsg(*msg, *cloud);
+		}
+
 		if (mapCrop)
 		{
 			auto costmap = costmap_ros_->getCostmap();
@@ -251,27 +276,9 @@ private:
 				if (debug)
 					RCLCPP_INFO(get_logger(), "MapCropping...");
 
-				// Get transform from current cloud to map
-				std::string fromFrameRel = msg->header.frame_id;
-				std::string toFrameRel = mapFrame;
-				try
-				{
-					transformStamped = tf_buffer_->lookupTransform(
-						toFrameRel, fromFrameRel, tf2_ros::fromMsg(msg->header.stamp));
-					if (debug)
-						RCLCPP_INFO(get_logger(), "Transforming to %s from %s.", toFrameRel.c_str(), fromFrameRel.c_str());
-				}
-				catch (tf2::TransformException &ex)
-				{
-					RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
-				}
-
 				// Set up a point bag and an extractror
 				pcl::PointIndices::Ptr knownObstacle(new pcl::PointIndices());
 				pcl::ExtractIndices<pcl::PointXYZ> extract;
-				geometry_msgs::msg::PointStamped point_stamped;
-				point_stamped.header = msg->header;
-				point_stamped.point.z = 0;
 
 				unsigned int mx, my;
 				auto costmap = costmap_ros_->getCostmap();
@@ -280,12 +287,8 @@ private:
 				// Go through points in cloud, transform and look up in the map
 				for (size_t i = 0; i < cloud->size(); i++)
 				{
-					point_stamped.point.x = cloud->points[i].x,
-					point_stamped.point.y = cloud->points[i].y;
-					point_stamped.point.z = cloud->points[i].z;
-					tf2::doTransform(point_stamped, point_stamped, transformStamped); // Transform i-th point into the map frame
 					// Find the bitmap index corresponding to the point in the map
-					inMap = costmap->worldToMap(point_stamped.point.x, point_stamped.point.y, mx, my);
+					inMap = costmap->worldToMap(cloud->points[i].x, cloud->points[i].y, mx, my);
 					if (!inMap) // if there is a nonzero value in the map the obstacle is known and the point is added to be removed
 						knownObstacle->indices.push_back(i);
 					else if (costmap->getCost(mx, my) > mapTreshold)
@@ -328,22 +331,35 @@ private:
 			}
 			else
 			{
-				transformStamped = tf_buffer_->lookupTransform(msg->header.frame_id,
-															msg->header.frame_id,
-															tf2_ros::fromMsg(msg->header.stamp),
-															tf2::Duration(diff));
-				Eigen::Matrix4f transform_trans = Eigen::Matrix4f::Identity();
-				Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
-				transform_trans(0, 3) = transformStamped.transform.translation.x;
-				transform_trans(1, 3) = transformStamped.transform.translation.y;
-				transform_trans(2, 3) = transformStamped.transform.translation.z;
-				transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(transformStamped.transform.rotation.w,
-																					transformStamped.transform.rotation.x,
-																					transformStamped.transform.rotation.y,
-																					transformStamped.transform.rotation.z));
+				geometry_msgs::msg::TransformStamped transformStamped;
+				bool getTrans = true;
+				try
+				{
+					transformStamped = tf_buffer_->lookupTransform(msg->header.frame_id,
+																msg->header.frame_id,
+																tf2_ros::fromMsg(msg->header.stamp),
+																tf2::Duration(diff));
+				}
+				catch (tf2::TransformException &ex)
+				{
+					getTrans = false;
+					RCLCPP_INFO(get_logger(), "Could not transform for agg in time: %s: %s", msg->header.stamp, ex.what());
+				}
+				if (getTrans)
+				{
+					Eigen::Matrix4f transform_trans = Eigen::Matrix4f::Identity();
+					Eigen::Matrix4f transform_rot = Eigen::Matrix4f::Identity();
+					transform_trans(0, 3) = transformStamped.transform.translation.x;
+					transform_trans(1, 3) = transformStamped.transform.translation.y;
+					transform_trans(2, 3) = transformStamped.transform.translation.z;
+					transform_rot.topLeftCorner(3, 3) = Eigen::Matrix3f(Eigen::Quaternionf(transformStamped.transform.rotation.w,
+																						transformStamped.transform.rotation.x,
+																						transformStamped.transform.rotation.y,
+																						transformStamped.transform.rotation.z));
 
-				pcl::transformPointCloud(*cloud, *cloud, transform_trans * transform_rot);
-				*cloud_ += *cloud;
+					pcl::transformPointCloud(*cloud, *cloud, transform_trans * transform_rot);
+					*cloud_ += *cloud;
+				}
 			}
 		}
 
@@ -366,23 +382,15 @@ private:
 			localMap->info.width = (maxX) / VGxRes;
 			localMap->info.origin.position.x = 0;
 			localMap->info.origin.position.y = minY;
-			std::string toFrameRel = mapFrame;
-			std::string fromFrameRel = msg->header.frame_id;
-			try
-			{
-				transformStamped = tf_buffer_->lookupTransform(
-					toFrameRel, fromFrameRel, tf2::TimePointZero);
-			}
-			catch (tf2::TransformException &ex)
-			{
-				RCLCPP_INFO(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
-			}
 
-			geometry_msgs::msg::PoseStamped map_pose;
-			map_pose.header = msg->header;
-			map_pose.pose = localMap->info.origin;
-			tf2::doTransform(map_pose, map_pose, transformStamped);
-			localMap->info.origin = map_pose.pose;
+			if (getMap)
+			{
+				geometry_msgs::msg::PoseStamped map_pose;
+				map_pose.header = msg->header;
+				map_pose.pose = localMap->info.origin;
+				tf2::doTransform(map_pose, map_pose, transformStampedToMap);
+				localMap->info.origin = map_pose.pose;
+			}
 
 			// create and fill the map
 			int mapRows = (int)(maxX / VGxRes);
@@ -423,6 +431,7 @@ private:
 	double minX, minY, minZ, maxX, maxY, maxZ;
 	double VGxRes, VGyRes, VGzRes;
 	std::string mapFrame;
+	bool getMap;
 
 	bool debug;
 
@@ -431,7 +440,7 @@ private:
 	double window_;
 	rcl_time_point_value_t aggregation_started_time_;
 	rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::PointCloud2>::SharedPtr agg_publisher_{nullptr};
-	geometry_msgs::msg::TransformStamped transformStamped;
+	geometry_msgs::msg::TransformStamped transformStampedToMap;
 
 	// The node needs a costmap node
 	std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
