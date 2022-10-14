@@ -302,7 +302,7 @@ private:
 					RCLCPP_INFO(get_logger(), "Cropped %d points as known obstacles in the map.", knownObstacle->indices.size());
 			}
 		}
-		if (!(*cloud).size())
+		if (cloud->size() > 0)
 		{
 			sensor_msgs::msg::PointCloud2::SharedPtr message(new sensor_msgs::msg::PointCloud2);
 			pcl::toROSMsg(*cloud, *message);
