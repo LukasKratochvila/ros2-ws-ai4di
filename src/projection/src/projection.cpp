@@ -175,6 +175,7 @@ class Projection : public rclcpp::Node
         detection_ros.bbox.center.y = static_cast<double>(centers.at(i).y);
         detection_ros.bbox.size_x = static_cast<double>(rectangles.at(i).width);
         detection_ros.bbox.size_y = static_cast<double>(rectangles.at(i).height);
+        detection_ros.is_tracking = true;
         detection_ros.tracking_id = objectStrings.at(i);
       }
       publisher_->publish(*detect);

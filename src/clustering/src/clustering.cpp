@@ -216,6 +216,7 @@ private:
     {
       vision_msgs::msg::Detection3D det;
       det.header = msg->header;
+      det.is_tracking = true;
       det.tracking_id = std::to_string(cnt++);
 
       det.bbox.center.position.x = cx.at(i);

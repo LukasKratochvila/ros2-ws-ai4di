@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'detection_visualizer = detection_visualizer:main',
+            'detection_visualizer = detection_visualizer.det2d:main',
             'det3d_viz_node = detection_visualizer.det3d:main',
             'decompressor_node = detection_visualizer.decompressor:main',
         ],

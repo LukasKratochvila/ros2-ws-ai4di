@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy
@@ -55,10 +54,12 @@ class Det3dVisualizerNode(Node):
 
         self.declare_parameter("input_det3d_topic", '/detections3D')
         self.declare_parameter("output_topic", '~/dbg_markers')
+        self.declare_parameter("cleaning_freq", 1.0)
         self.declare_parameter("debug", True)
 
         self.input_det3d_topic = self.get_parameter("input_det3d_topic")._value
         self.output_topic = self.get_parameter("output_topic")._value
+        self.cleaning_freq = self.get_parameter("cleaning_freq")._value
         self.debug = self.get_parameter("debug")._value
 
         self.output_qos = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST,
@@ -66,12 +67,16 @@ class Det3dVisualizerNode(Node):
                                      reliability=QoSReliabilityPolicy.RELIABLE,
                                      depth=1)
         self.detect3DSub_ = self.create_subscription(Detection3DArray, self.input_det3d_topic, self.on_detections, 10)
-
         self.detectVizPub_ = self.create_publisher(MarkerArray, self.output_topic, self.output_qos)
+
+        self.timer = self.create_timer(1/self.cleaning_freq, self.timer_callback)
+        self.no_detection = False
         
         self.get_logger().info("Detection_visualizer_3d has started.")
 
     def on_detections(self, detections_msg):
+
+        self.no_detection = False
     
         if self.debug:
             self.get_logger().info("Recieved 3D detections.")
@@ -80,6 +85,7 @@ class Det3dVisualizerNode(Node):
         # Clear all markers
         marker = Marker()
         marker.id = 0
+        marker.header=detections_msg.header
         marker.action = Marker.DELETEALL
         detVizmsg.markers.append(marker)
 
@@ -106,7 +112,6 @@ class Det3dVisualizerNode(Node):
             marker.scale = detection.bbox.size
             c=create_unique_color_float(int(detection.tracking_id))
             marker.color.a, marker.color.r, marker.color.g, marker.color.b = 0.6, c[0], c[1], c[2]
-            #marker.lifetime = rclpy.duration.Duration(seconds=0.05)
             
             detVizmsg.markers.append(marker)
 
@@ -130,6 +135,21 @@ class Det3dVisualizerNode(Node):
         self.detectVizPub_.publish(detVizmsg)
         if self.debug:
             self.get_logger().info("Publishing MarkerArray")
+
+    def timer_callback(self):
+        if (self.no_detection):
+            detVizmsg = MarkerArray()
+            # Clear all markers
+            marker = Marker()
+            marker.id = 0
+            marker.header.stamp=self.get_clock().now().to_msg()
+            marker.action = Marker.DELETEALL
+            detVizmsg.markers.append(marker)
+            self.detectVizPub_.publish(detVizmsg)
+            if self.debug:
+                self.get_logger().info("No detection for {} s -> Cleaning MarkerArray".format(self.cleaning_freq))
+        self.no_detection = True
+
  
 def main():
     rclpy.init()
