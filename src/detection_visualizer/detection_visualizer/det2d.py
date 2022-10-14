@@ -104,7 +104,7 @@ class Det2dVisualizerNode(Node):
 
         self.timer = self.create_timer(1/self.pub_image_freq, self.timer_callback)
         self.no_detection = False
-        self.last_image_msg = Image
+        self.last_image_msg = Image()
         self.subscriber = self.create_subscription(Image, self.input_img_topic, self.img_callback, self.queue_size)
         
         self.get_logger().info("Detection_visualizer have started.")
@@ -179,11 +179,12 @@ class Det2dVisualizerNode(Node):
         self.last_image_msg=image_msg
 
     def timer_callback(self):
-        if (self.no_detection):
+        if (self.no_detection and len(self.last_image_msg.data) > 0):
             self._image_pub.publish(self.last_image_msg)
             if self.debug:
                 self.get_logger().info("No detection for {} s -> publish last image".format(self.pub_image_freq))
         self.no_detection = True
+        self.last_image_msg = Image()
 
 def main():
     rclpy.init()

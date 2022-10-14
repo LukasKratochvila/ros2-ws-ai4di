@@ -94,7 +94,10 @@ private:
     // Dont have anything to process -> return
     if (!(*cloud).size())
     {
-      detections_publisher_->publish(output_det);
+      log << "PointCloud has 0 points." << std::endl;
+      RCLCPP_WARN(this->get_logger(), log.str());
+      log.clear();
+      //detections_publisher_->publish(output_det);
       return;
     }
     // Creating the KdTree object for the search method of the extraction
@@ -119,7 +122,10 @@ private:
     // Dont have anything to publish -> return
     if (!cluster_indices.size())
     {
-      detections_publisher_->publish(output_det);
+      log << "PointCloud representing: 0 Clusters." << std::endl;
+      RCLCPP_WARN(this->get_logger(), log.str());
+      log.clear();
+      //detections_publisher_->publish(output_det);
       return;
     }
     std::vector<double> cx, cy, cz, dx, dy, dz, ox, oy, oz, ow;

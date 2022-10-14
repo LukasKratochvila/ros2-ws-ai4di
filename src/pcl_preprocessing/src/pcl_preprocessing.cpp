@@ -302,18 +302,22 @@ private:
 					RCLCPP_INFO(get_logger(), "Cropped %d points as known obstacles in the map.", knownObstacle->indices.size());
 			}
 		}
-
-		// auto message = sensor_msgs::msg::PointCloud2::SharedPtr();
-		sensor_msgs::msg::PointCloud2::SharedPtr message(new sensor_msgs::msg::PointCloud2);
-		// toPCLPointCloud2 (*cloud, cloud_pc2);	//void   toPCLPointCloud2 (const pcl::PointCloud<PointT>& cloud, pcl::PCLPointCloud2& msg)
-		// pcl_conversions::fromPCL(cloud_pc2, *message);	//void 	fromPCL (const pcl::PCLPointCloud2 &pcl_pc2, sensor_msgs::PointCloud2 &pc2)
-		pcl::toROSMsg(*cloud, *message);
-		if (debug)
-			RCLCPP_INFO(get_logger(), "Publishing cloud of size of %d points", cloud->size());
-		// if(debug)
-		//	RCLCPP_INFO(get_logger(), "Input msg stamp:%d Output msg stamp:%d", msg->header.stamp.sec, message->header.stamp.sec);
-		message->header = msg->header;
-		publisher_->publish(*message);
+		if (!(*cloud).size())
+		{
+			sensor_msgs::msg::PointCloud2::SharedPtr message(new sensor_msgs::msg::PointCloud2);
+			pcl::toROSMsg(*cloud, *message);
+			if (debug)
+				RCLCPP_INFO(get_logger(), "Publishing cloud of size of %d points", cloud->size());
+			// if(debug)
+			//	RCLCPP_INFO(get_logger(), "Input msg stamp:%d Output msg stamp:%d", msg->header.stamp.sec, message->header.stamp.sec);
+			message->header = msg->header;
+			publisher_->publish(*message);
+		}
+		else
+		{
+			RCLCPP_WARN(get_logger(), "Cloud has %d points", cloud->size());
+			return;
+		}
 
 		if (enableAgg){
 			uint64_t time_nano = msg->header.stamp.sec * 1e9 + msg->header.stamp.nanosec;

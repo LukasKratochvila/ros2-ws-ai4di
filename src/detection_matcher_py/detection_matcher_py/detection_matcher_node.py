@@ -19,7 +19,8 @@ class DetectionMatcher(Node):
       self.declare_parameter("queue_size", 10)
       self.declare_parameter("time_toll", 10)
       self.declare_parameter("tresh", 0.9)
-      self.declare_parameter("only_match", True)  
+      self.declare_parameter("only_match", True)
+      self.declare_parameter("pub_det3d_freq", 1.0)  
       self.declare_parameter("debug", True)     
 
       self.Project2D_topic = self.get_parameter("Project2D_topic")._value
@@ -30,6 +31,7 @@ class DetectionMatcher(Node):
       self.time_toll = self.get_parameter("time_toll")._value
       self.tresh = self.get_parameter("tresh")._value
       self.only_match = self.get_parameter("only_match")._value
+      self.pub_det3d_freq = self.get_parameter("pub_det3d_freq")._value
       self.debug = self.get_parameter("debug")._value
       
       self.project2DSub_ = message_filters.Subscriber(self, Detection2DArray, self.Project2D_topic)
@@ -41,6 +43,11 @@ class DetectionMatcher(Node):
          
       self.output_qos = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, reliability=QoSReliabilityPolicy.RELIABLE, depth=1)
       self.detect3DPub_ = self.create_publisher(Detection3DArray, self.Output3D_topic, self.output_qos)
+
+      self.timer = self.create_timer(1/self.pub_det3d_freq, self.timer_callback)
+      self.no_projection = False
+      self.last_det3d_msg = Detection3DArray()
+      self.subscriber = self.create_subscription(Detection3DArray, self.Detect3D_topic, self.det3d_callback, self.queue_size)
       
       self.get_logger().info("DetectionMatcher now running, looking for coresponding detections in " + self.Project2D_topic + ", " + self.Detect2D_topic + " and " + self.Detect3D_topic + " topics.")
     
@@ -61,6 +68,7 @@ class DetectionMatcher(Node):
          return IoverU
     
    def syncCallback(self, project2Dmsg, detect2Dmsg, detect3Dmsg):
+      self.no_projection = False
    # When projected 3D clusters and 2D YOLO detections come concurrently
       if len(project2Dmsg.detections) != len(detect3Dmsg.detections):
          self.get_logger().error("Different detection size of {} and {}.".format(self.Project2D_topic, self.Detect3D_topic))
@@ -118,6 +126,16 @@ class DetectionMatcher(Node):
             self.get_logger().info("Published {} detection3darray message.".format(len(outmsg.detections)))
          else:
             self.get_logger().info("Published {} detection3darray message.".format(len(detect3Dmsg.detections)))
+
+   def det3d_callback(self, det3d_msg):
+        self.last_det3d_msg=det3d_msg
+
+   def timer_callback(self):
+        if (self.no_projection and len(self.last_det3d_msg.detections) > 0):
+            self.detect3DPub_.publish(self.last_det3d_msg)
+            if self.debug:
+                self.get_logger().info("No detection for {} s -> publish last image".format(self.pub_det3d_freq))
+        self.no_projection = True
 
 def main(args=None):
     rclpy.init(args=args)

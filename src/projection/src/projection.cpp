@@ -73,8 +73,12 @@ class Projection : public rclcpp::Node
   private:
     void topic_callback(const vision_msgs::msg::Detection3DArray::ConstSharedPtr detections) const
     {
-      if (detections->detections.size()== 0)
+      std::stringstream ss;
+      if (detections->detections.size() == 0)
       {
+        ss << "Got 0 detections." << std::endl;
+        RCLCPP_WARN(get_logger(),ss.str());
+        ss.clear();
         return;
       } 
       std::string fromFrameRel = detections->detections.at(0).header.frame_id;
@@ -86,7 +90,6 @@ class Projection : public rclcpp::Node
       catch (tf2::TransformException & ex) {
         RCLCPP_WARN(get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
       }
-      std::stringstream ss;
       if (debug){
         ss << "Got detections number:" << detections->detections.size() << std::endl;
         RCLCPP_INFO(get_logger(),ss.str());
@@ -178,6 +181,13 @@ class Projection : public rclcpp::Node
         detection_ros.is_tracking = true;
         detection_ros.tracking_id = objectStrings.at(i);
       }
+      if (detect->detections.size() == 0)
+      {
+        ss << "Projection has 0 detections." << std::endl;
+        RCLCPP_WARN(get_logger(),ss.str());
+        ss.clear();
+        return;
+      } 
       publisher_->publish(*detect);
       if (debug){
         ss << "Published detections number:" << detect->detections.size();

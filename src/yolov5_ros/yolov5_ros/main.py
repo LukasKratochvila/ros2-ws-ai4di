@@ -211,6 +211,7 @@ class yolov5_ros(Node):
         self.declare_parameter('half', False)
         self.declare_parameter('dnn', False)
         self.declare_parameter('processed_classes', ["person"])
+        self.declare_parameter('debug', False)
 
         self.input_img_topic = self.get_parameter("input_img_topic")._value
         self.output_det_topic = self.get_parameter("output_det_topic")._value
@@ -230,6 +231,7 @@ class yolov5_ros(Node):
         self.half = self.get_parameter('half').value
         self.dnn = self.get_parameter('dnn').value
         self.processed_classes = self.get_parameter('processed_classes').value
+        self.debug = self.get_parameter('debug').value
 
         #self.pub_bbox = self.create_publisher(BoundingBoxes, 'yolov5/bounding_boxes', 10)
         #self.pub_image = self.create_publisher(Image, 'yolov5/image_raw', 10)
@@ -290,7 +292,10 @@ class yolov5_ros(Node):
         class_list, confidence_list, x_min_list, y_min_list, x_max_list, y_max_list = self.yolov5.image_callback(image_raw)
 
         msg = self.yolovFive2bboxes_msgs(bboxes=[x_min_list, y_min_list, x_max_list, y_max_list], scores=confidence_list, cls=class_list, img_header=image.header)
-        self.pub_bbox.publish(msg)
+        if (len(msg.detections) > 0):
+            self.pub_bbox.publish(msg)
+        elif self.debug:
+            self.get_logger().info("No detection found in image form time: {}.".format(image.header.stamp))
 
         #self.pub_image.publish(image)
 
