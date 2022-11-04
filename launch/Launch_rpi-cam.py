@@ -41,7 +41,7 @@ def generate_launch_description():
 
     ld.add_action(cam_image_node)
     
-    ld.add_action(map_lookup_node)
+    #ld.add_action(map_lookup_node)
     ld.add_action(projection_node)
 
     return ld
