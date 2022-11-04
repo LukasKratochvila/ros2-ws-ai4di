@@ -36,6 +36,12 @@ def generate_launch_description():
         name="projection_node",
         parameters=[configured_params],
         remappings=remappings)
+    detection_matcher_node = Node(
+        package='detection_matcher_py',
+        executable='detection_matcher_node',
+        name="detection_matcher_node",
+        parameters=[configured_params],
+        remappings=remappings)
 
     ld = LaunchDescription()
 
@@ -43,5 +49,7 @@ def generate_launch_description():
     
     #ld.add_action(map_lookup_node)
     ld.add_action(projection_node)
+    
+    ld.add_action(detection_matcher_node)
 
     return ld
