@@ -124,7 +124,7 @@ protected:
 		if (createLocalMap)
 			mapPub_ = create_publisher<nav_msgs::msg::OccupancyGrid>(get_parameter("output_map_topic").as_string(), 10);
 		tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
-		transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+		tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
 		if (enableAgg){
 			cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
@@ -428,8 +428,8 @@ private:
 	rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pclSub_{nullptr};
 	rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_{nullptr};
 	rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr mapPub_{nullptr};
-	std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
 	std::unique_ptr<tf2_ros::Buffer> tf_buffer_{nullptr};
+	std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
 	bool crop, detectFloor, downSample, mapCrop, createLocalMap, enableAgg;
 	unsigned char mapTreshold;
 	double minX, minY, minZ, maxX, maxY, maxZ;

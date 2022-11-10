@@ -1,356 +1,354 @@
 # Must be defined name in launch
+# Topic structure is: /robot_name/task/content
+# Ex: /loki_1/detection/matched_detections
 
-cam_image_node:
-  ros__parameters:
-    reliability: 'reliable'               # Reliability QoS setting. Either 'reliable' (default) or 'best_effort'
-    history: 'keep_last'                  # History QoS setting. Either 'keep_last' (default) or 'keep_all'. If 'keep_last', then up to N samples are stored where N is the depth
-    depth: 10                             # Depth of the publisher queue. Only honored if history QoS is 'keep_last'. Default value is 10
-    frequency: 30.0                       # Publish frequency in Hz. Default value is 30
-    burger_mode: false                    # Produce images of burgers rather than connecting to a camera
-    show_camera: false                    # Show camera stream. Either 'true' or 'false' (default)
-    width: 640                            # Width component of the camera stream resolution. Default value is 320
-    height: 480                           # Height component of the camera stream resolution. Default value is 240
-    frame_id: image                       # ID of the sensor frame. Default value is 'camera_frame'
-    output_topic: '/detector_node/images' # Output ROS topic. Default value is 'image'
-    device_id: 0                          # ID of the camera source. Default value is '0'
-    api_id: 0                             # ID of the opencv api. Default value is '0'
-    cap_mode: 0                           # Capture mode (only for libv4l). Default value is '0'
-    debug: false
+# Frame structure is: robot_name_sensor_direction
+# Ex: loki_1_camera_front
 
-livox_node:
-  ros__parameters:
-    xfer_format: 0                              # 0-Pointcloud2(PointXYZRTL), 1-customized pointcloud format
-    multi_topic: 0                              # 0-All LiDARs share the same topic, 1-One LiDAR one topic
-    data_src: 0                                 # 0-lidar,1-hub
-    publish_freq: 10.0                          # freqency of publish,1.0,2.0,5.0,10.0,etc    freq  from (0.1, 100)
-    output_data_type: 0                         # Output to ros: 0, Output to bagfile: = 1,
-    frame_id: "cloud"
-    user_config_path: "path_default"
-    cmdline_input_bd_code: "000000000000001"
-    lvx_file_path: "/home/livox/livox_test.lvx"
-
-decompressor_node:
-  ros__parameters:
-    input_topic: "/detector_node/images/compressed"
-    #input_topic: "/image/compressed"
-    output_topic: "/detector_node/images" #'~/raw'
-    debug: false
-
-writer_node:
-  ros__parameters:
-    save_dir: "./"
-    img_sub_dir: "image/compressed"
-    pcl_sub_dir: "pcl/"
-    input_img_topic: "/image"
-    input_pcl_topic: "/livox/lidar"
-    mode: "both" # img, pcl or both
-    synchronized: false
-    time_toll: 0.01
-    start_img_counter: 0
-    start_pcl_counter: 0
-    img_file_ext: "jpg"
-    pcl_file_ext: "pcd"
-    debug: false
-pcl_pub_node:
-  ros__parameters:
-    input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
-    frequency: 6.0
-    output_topic: "/livox/lidar"
-    frame_id: "cloud"
-    start_counter: 0
-    file_ext: ".pcd"
-    debug: false
-img_pub_node:
-  ros__parameters:
-    input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/image" #"/home/kratochvila/Desktop/lidar/mereni2/image"
-    output_topic: "/detector_node/images"
-    frame_id: "image"
-    frequency: 30.0
-    start_counter: 0
-    file_ext: "jpg"
-    debug: false
-video_pub_node:
-  ros__parameters:
-    output_topic: "/detector_node/images"
-    frame_id: "image"
-    frequency: 2.0
-    encoding: "bgr8"
-    debug: false
-
-pcl_preprocessing_node:
-  ros__parameters:
-    crop: true
-    detectFloor: false
-    downSample: true
-    mapCrop: true
-    enableAgg: true
-    createLocalMap: false
-    input_topic: "/livox/lidar"
-    output_cloud_topic: "~/filteredPcl"
-    output_map_topic: "~/localMap"
-    filter_x_min: 0.1
-    filter_y_min: -10.0
-    filter_z_min: -0.2
-    filter_x_max: 25.0
-    filter_y_max: 10.0
-    filter_z_max: 2.0
-    voxel_grid_x_res: 0.025 # x and y should be same
-    voxel_grid_y_res: 0.025
-    voxel_grid_z_res: 0.025
-    mapTreshold: 200
-    map_frame: "map"
-    agg_window: 2e8
-    costmap_node_name: "pcl_preprocessing_costmap"
-    local_costmap_namespace: "pcl_preprocessing_costmap"
-    debug: false
-
-clustering_node:
-  ros__parameters:
-    cluster_tolerance: 0.2 #in meters
-    min_cluster_size: 30
-    max_cluster_size: 5000
-    input_topic: "/pcl_preprocessing_node/filteredPcl/agg"
-    output_topic: "~/detections_clusters"
-    OBB: true
-    step: 30
-    debug: false
-
-map_lookup_node:
-  ros__parameters:
-    input_topic: "/clustering_node/detections"
-    output_boxes_topic: "~/unknownObstacles"
-    output_map_topic: "~/ObstacleMap"
-    synchronised: false
-    map_server: "/map_server/map"
-    debug: false
-
-projection_node:
-  ros__parameters:
-    input_topic: "/clustering_node/detections_clusters"
-    output_topic: "~/projections"
-    dbg_img_topic: "~/img"
-    output_frame: "image"
-    K: [531.7944, 0.0, 296.3159, 0.0, 530.179, 255.4285, 0.0, 0.0, 1.0]
-    D: [-0.4512, 0.7176, -0.0014, 0.0017, -1.2896]
-    debug: false
-
-# open robotisc - yolo
-detector_node:
-  ros__parameters:
-    network:
-      config: "./model/yolov3-tiny.cfg"
-      weights:  "./model/yolov3-tiny.weights"
-      class_names: "./model/coco.names"
-    detection:
-      threshold: 0.25
-      nms_threshold: 0.45
-# yolov5
-detectorv5_node:
-  ros__parameters:
-#   weights: str(ROOT) + '/config/yolov5s.pt'
-#   data: str(ROOT) + '/data/coco128.yaml'
-    input_img_topic: "/detector_node/images"
-    output_det_topic: "/detector_node/detections"
-    imagez_height: 640
-    imagez_width: 640
-    conf_thres: 0.25
-    iou_thres: 0.45
-    max_det: 1000
-    device: 'cpu'
-    view_img: False
-#    classes: None
-    agnostic_nms: False
-    line_thickness: 2
-    half: False
-    dnn: False
-    processed_classes: ["person"] # put "all" for all classes
-      
-detection_matcher_node:
-  ros__parameters:
-    Project2D_topic: "/projection_node/projections"
-    Detect2D_topic: "/detector_node/detections"
-    Detect3D_topic: "/clustering_node/detections_clusters"
-    Output3D_topic: "~/matched_detections"
-    queue_size: 100
-    time_toll: 0.5
-    tresh: 0.2
-    only_match: true
-    debug: false
-
-tracker_2d_node:
-  ros__parameters:
-    input_det_topic: '/detector_node/detections'
-    output_det_topic: '~/detections_tracker'
-    dim: 2
-    model_path: "model/tracker-mars-small128.pb"
-    metric: "euclidean"
-    matching_threshold: 0.2
-    budget: 10
-    max_iou_distance: 0.9
-    max_age: 30
-    n_init: 3
-    debug: false
-tracker_3d_node_clusters:
-  ros__parameters:
-    input_det_topic: '/clustering_node/detections_clusters'
-    output_det_topic: '~/detections_tracker'
-    dim: 3
-    model_path: None
-    metric: "euclidean"
-    matching_threshold: 0.2
-    budget: 10
-    max_iou_distance: 0.9
-    max_age: 3
-    n_init: 3
-    debug: false
-tracker_3d_node_matches:
-  ros__parameters:
-    input_det_topic: '/detection_matcher_node/matched_detections'
-    output_det_topic: '~/detections_tracker'
-    dim: 3
-    model_path: None
-    metric: "euclidean"
-    matching_threshold: 0.2
-    budget: 10
-    max_iou_distance: 0.9
-    max_age: 3
-    n_init: 3
-    debug: false
-    
-viz_2d_yolo:
-  ros__parameters:
-    input_img_topic: '/detector_node/images'
-    input_det2d_topic: '/detector_node/detections'
-    output_topic: '~/dbg_images'
-    time_toll: 0.1
-    queue_size: 100
-    start_counter: 0
-    encoding: "bgr8"
-    min_size_x: 50
-    min_size_y: 50
-    debug: false
-viz_2d_projection:
-  ros__parameters:
-    input_img_topic: '/detector_node/images'
-    input_det2d_topic: '/projection_node/projections'
-    output_topic: '~/dbg_images'
-    time_toll: 0.1
-    queue_size: 100
-    start_counter: 0
-    encoding: "bgr8"
-    min_size_x: 50
-    min_size_y: 50
-    debug: false
-viz_2d_tracker:
-  ros__parameters:
-    input_img_topic: '/detector_node/images'
-    input_det2d_topic: '/tracker_2d_node/detections_tracker'
-    output_topic: '~/dbg_images'
-    time_toll: 0.001
-    queue_size: 100
-    start_counter: 0
-    encoding: "bgr8"
-    min_size_x: 50
-    min_size_y: 50
-    debug: false
-
-viz_3d_clusters:
-  ros__parameters:
-    input_det3d_topic: '/clustering_node/detections_clusters'
-    output_topic: '~/dbg_markers'
-    debug: false
-viz_3d_tracker_clusters:
-  ros__parameters:
-    input_det3d_topic: '/tracker_3d_node_clusters/detections_tracker'
-    output_topic: '~/dbg_markers'
-    debug: false
-viz_3d_matcher:
-  ros__parameters:
-    input_det3d_topic: '/detection_matcher_node/matched_detections'
-    output_topic: '~/dbg_markers'
-    debug: false
-viz_3d_tracker_matches:
-  ros__parameters:
-    input_det3d_topic: '/tracker_3d_node_matches/detections_tracker'
-    output_topic: '~/dbg_markers'
-    debug: false
-
-lifecycle_manager_lidar:
-  ros__parameters:
-    autostart: True
-    use_sim_time: True
-    node_names: ["pcl_preprocessing_node"]
-
-
-#map server should be configured mostly correctly, see:
-#     https://navigation.ros.org/configuration/packages/configuring-map-server.html
-# for params and examples
-map_server:
-  ros__parameters:
-    log_severity: 0 #0-debug, 1-info, 2-Warn, 3-Error, 4-Fatal
-    use_sim_time: true
-    yaml_filename: "./maps/small_testbed_ceitec_map_10cmpx.yaml"
-    #yaml_filename: "./maps/SE1_102_map_5cmpx.yaml"
-    topic_name: "map"
-    frame_id: "map"
-
-pcl_preprocessing_costmap:
-  pcl_preprocessing_costmap:
+loki_1:
+  cam_image_node:
     ros__parameters:
-      global_frame: map
-      robot_base_frame: cloud
-      rolling_window: true
-      width: 15
-      height: 15
-      update_frequency: 1.0
-      resolution: 0.05
-      robot_radius: 0.2413
-      track_unknown_space: True
-      plugins: ["static_layer","inflation_layer","obstacle_layer"]
-      inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        enabled: true
-        inflation_radius: 0.5 #0.1
-        cost_scaling_factor: 5.0
-        inflate_unknown: false
-        inflate_around_unknown: false
-        always_send_full_costmap: false
-      obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: false
-        observation_sources: livox
-        footprint_clearing_enabled: true
-        max_obstacle_height: 2.0
-        combination_method: 1
-        livox:
-          topic: /pcl_preprocessing_node/filteredPcl #/livox/lidar
+      reliability: 'reliable'               # Reliability QoS setting. Either 'reliable' (default) or 'best_effort'
+      history: 'keep_last'                  # History QoS setting. Either 'keep_last' (default) or 'keep_all'. If 'keep_last', then up to N samples are stored where N is the depth
+      depth: 10                             # Depth of the publisher queue. Only honored if history QoS is 'keep_last'. Default value is 10
+      frequency: 30.0                       # Publish frequency in Hz. Default value is 30
+      burger_mode: false                    # Produce images of burgers rather than connecting to a camera
+      show_camera: false                    # Show camera stream. Either 'true' or 'false' (default)
+      width: 640                            # Width component of the camera stream resolution. Default value is 320
+      height: 480                           # Height component of the camera stream resolution. Default value is 240
+      frame_id: "loki_1_camera_front"       # ID of the sensor frame. Default value is 'camera_frame'
+      output_topic: "sensor/camera_front"   # Output ROS topic. Default value is 'image'
+      device_id: 0                          # ID of the camera source. Default value is '0'
+      api_id: 0                             # ID of the opencv api. Default value is '0'
+      cap_mode: 0                           # Capture mode (only for libv4l). Default value is '0'
+      debug: false
+
+  livox_node:
+    ros__parameters:
+      xfer_format: 0                              # 0-Pointcloud2(PointXYZRTL), 1-customized pointcloud format
+      multi_topic: 0                              # 0-All LiDARs share the same topic, 1-One LiDAR one topic
+      data_src: 0                                 # 0-lidar,1-hub
+      publish_freq: 10.0                          # freqency of publish,1.0,2.0,5.0,10.0,etc    freq  from (0.1, 100)
+      output_data_type: 0                         # Output to ros: 0, Output to bagfile: = 1,
+      frame_id: "loki_1_lidar_front"
+      user_config_path: "path_default"
+      cmdline_input_bd_code: "000000000000001"    # Set to use one livox
+      #lvx_file_path: "/home/livox/livox_test.lvx"
+
+  decompressor_node:
+    ros__parameters:
+      #input_topic: "sensor/camera_front/compressed"
+      input_topic: "/detector_node/images/compressed"
+      output_topic: "sensor/camera_front" #/decompressed
+      debug: false
+
+  writer_node:
+    ros__parameters:
+      save_dir: "./"
+      img_sub_dir: "image/compressed"
+      pcl_sub_dir: "pcl/"
+      input_img_topic: "sensor/camera_front"
+      input_pcl_topic: "livox/lidar"
+      mode: "both" # img, pcl or both
+      synchronized: false
+      time_toll: 0.01
+      start_img_counter: 0
+      start_pcl_counter: 0
+      img_file_ext: "jpg"
+      pcl_file_ext: "pcd"
+      debug: false
+  pcl_pub_node:
+    ros__parameters:
+      input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/pcl"
+      frequency: 6.0
+      output_topic: "livox/lidar"
+      frame_id: "loki_1_lidar_front"
+      start_counter: 0
+      file_ext: ".pcd"
+      debug: false
+  img_pub_node:
+    ros__parameters:
+      input_dir: "/home/kratochvila/Desktop/Data/tovarna/vyber/mer1/image" #"/home/kratochvila/Desktop/lidar/mereni2/image"
+      output_topic: "sensor/camera_front"
+      frame_id: "loki_1_camera_front"
+      frequency: 30.0
+      start_counter: 0
+      file_ext: "jpg"
+      debug: false
+  video_pub_node:
+    ros__parameters:
+      output_topic: "sensor/camera_front"
+      frame_id: "loki_1_camera_front"
+      frequency: 2.0
+      encoding: "bgr8"
+      debug: false
+
+  pcl_preprocessing_node:
+    ros__parameters:
+      crop: true
+      detectFloor: false
+      downSample: true
+      mapCrop: true
+      enableAgg: true
+      createLocalMap: false
+      #input_topic: "livox/lidar"
+      input_topic: "/livox/lidar"
+      output_cloud_topic: "preprocess/filteredPcl"
+      output_map_topic: "preprocess/localMap"
+      filter_x_min: 0.1
+      filter_y_min: -10.0
+      filter_z_min: -0.2
+      filter_x_max: 25.0
+      filter_y_max: 10.0
+      filter_z_max: 2.0
+      voxel_grid_x_res: 0.025 # x and y should be same
+      voxel_grid_y_res: 0.025
+      voxel_grid_z_res: 0.025
+      mapTreshold: 200
+      map_frame: "map"
+      agg_window: 2e8
+      costmap_node_name: "pcl_preprocessing_costmap"
+      local_costmap_namespace: "pcl_preprocessing_costmap"
+      debug: false
+
+  clustering_node:
+    ros__parameters:
+      cluster_tolerance: 0.2 #in meters
+      min_cluster_size: 30
+      max_cluster_size: 5000
+      input_topic: "preprocess/filteredPcl/agg"
+      output_topic: "detection/detections_clusters"
+      OBB: true
+      step: 30
+      debug: false
+
+  map_lookup_node:
+    ros__parameters:
+      input_topic: "detection/detections_clusters"
+      output_boxes_topic: "detection/unknownObstacles"
+      output_map_topic: "detection/ObstacleMap"
+      synchronised: false
+      map_server: "map_server/map"
+      debug: false
+
+  projection_node:
+    ros__parameters:
+      input_topic: "detection/detections_clusters"
+      output_topic: "preprocess/projections"
+      dbg_img_topic: "preprocess/projection_dbg_img"
+      output_frame: "image" #"loki_1_camera_front"
+      K: [531.7944, 0.0, 296.3159, 0.0, 530.179, 255.4285, 0.0, 0.0, 1.0]
+      D: [-0.4512, 0.7176, -0.0014, 0.0017, -1.2896]
+      debug: false
+
+  # open robotisc - yolo
+  detector_node:
+    ros__parameters:
+      network:
+        config: "./model/yolov3-tiny.cfg"
+        weights:  "./model/yolov3-tiny.weights"
+        class_names: "./model/coco.names"
+      detection:
+        threshold: 0.25
+        nms_threshold: 0.45
+  # yolov5
+  detectorv5_node:
+    ros__parameters:
+  #  weights: str(ROOT) + '/config/yolov5s.pt'
+  #   data: str(ROOT) + '/data/coco128.yaml'
+      input_img_topic: "sensor/camera_front" # /detector_node/images
+      output_det_topic: "preprocess/yolo_detections" # /detector_node/detections
+      imagez_height: 640
+      imagez_width: 640
+      conf_thres: 0.25
+      iou_thres: 0.45
+      max_det: 1000
+      device: 'cpu' #'cuda:0' 
+      view_img: False
+  #    classes: None
+      agnostic_nms: False
+      line_thickness: 2
+      half: False
+      dnn: False
+      processed_classes: ["person"] # put "all" for all classes
+        
+  detection_matcher_node:
+    ros__parameters:
+      Project2D_topic: "preprocess/projections"
+      Detect2D_topic: "preprocess/yolo_detections" # /detector_node/detections
+      Detect3D_topic: "detection/detections_clusters"
+      Output3D_topic: "detection/matched_detections" 
+      queue_size: 100
+      time_toll: 0.3
+      tresh: 0.2
+      only_match: false
+      debug: false
+
+  tracker_2d_node:
+    ros__parameters:
+      input_det_topic: "preprocess/yolo_detections" # /detector_node/detections
+      output_det_topic: "preprocess/yolo_tracker"
+      dim: 2
+      model_path: "model/tracker-mars-small128.pb"
+      metric: "euclidean"
+      matching_threshold: 0.2
+      budget: 10
+      max_iou_distance: 0.9
+      max_age: 30
+      n_init: 3
+      debug: false
+  tracker_3d_node_clusters:
+    ros__parameters:
+      input_det_topic: "detection/detections_clusters"
+      output_det_topic: "preprocess/cluster_tracker"
+      dim: 3
+      model_path: None
+      metric: "euclidean"
+      matching_threshold: 0.2
+      budget: 10
+      max_iou_distance: 0.9
+      max_age: 3
+      n_init: 3
+      debug: false
+  tracker_3d_node_matches:
+    ros__parameters:
+      input_det_topic: "detection/matched_detections" 
+      output_det_topic: "detection/matched_detections_tracker" 
+      dim: 3
+      model_path: None
+      metric: "euclidean"
+      matching_threshold: 0.2
+      budget: 10
+      max_iou_distance: 0.9
+      max_age: 3
+      n_init: 3
+      debug: false
+      
+  viz_2d_yolo:
+    ros__parameters:
+      input_img_topic: "sensor/camera_front" # /detector_node/images
+      input_det2d_topic: "preprocess/yolo_detections" # /detector_node/detections
+      output_topic: '~/dbg_images'
+      time_toll: 0.3
+      queue_size: 100
+      start_counter: 0
+      encoding: "bgr8"
+      min_size_x: 50
+      min_size_y: 50
+      debug: false
+  viz_2d_projection:
+    ros__parameters:
+      input_img_topic: 'sensor/camera_front' # /detector_node/images
+      input_det2d_topic: "preprocess/projections"
+      output_topic: '~/dbg_images'
+      time_toll: 0.1
+      queue_size: 100
+      start_counter: 0
+      encoding: "bgr8"
+      min_size_x: 50
+      min_size_y: 50
+      debug: false
+  viz_2d_tracker:
+    ros__parameters:
+      input_img_topic: "sensor/camera_front" # /detector_node/images
+      input_det2d_topic: "preprocess/yolo_tracker"
+      output_topic: '~/dbg_images'
+      time_toll: 0.001
+      queue_size: 100
+      start_counter: 0
+      encoding: "bgr8"
+      min_size_x: 50
+      min_size_y: 50
+      debug: false
+
+  viz_3d_clusters:
+    ros__parameters:
+      input_det3d_topic: "detection/detections_clusters"
+      output_topic: '~/dbg_markers'
+      cleaning_freq: 0.5
+      debug: false
+  viz_3d_tracker_clusters:
+    ros__parameters:
+      input_det3d_topic: "preprocess/cluster_tracker"
+      output_topic: '~/dbg_markers'
+      cleaning_freq: 0.5
+      debug: false
+  viz_3d_matcher:
+    ros__parameters:
+      input_det3d_topic: "detection/matched_detections"
+      output_topic: '~/dbg_markers'
+      cleaning_freq: 0.5
+      debug: false
+  viz_3d_tracker_matches:
+    ros__parameters:
+      input_det3d_topic: "detection/matched_detections_tracker"
+      output_topic: '~/dbg_markers'
+      cleaning_freq: 0.5
+      debug: false
+
+  lifecycle_manager_lidar:
+    ros__parameters:
+      autostart: True
+      use_sim_time: True
+      node_names: ["pcl_preprocessing_node"]
+      #node_names: ["pcl_preprocessing_node","map_server"]
+
+
+  #map server should be configured mostly correctly, see:
+  #     https://navigation.ros.org/configuration/packages/configuring-map-server.html
+  # for params and examples
+  map_server:
+    ros__parameters:
+      log_severity: 0 #0-debug, 1-info, 2-Warn, 3-Error, 4-Fatal
+      use_sim_time: true
+      yaml_filename: "./maps/small_testbed_ceitec_map_10cmpx.yaml"
+      #yaml_filename: "./maps/SE1_102_map_5cmpx.yaml"
+      #yaml_filename: "./maps/ricaip_hall_map.yaml"
+      topic_name: "/map"
+      frame_id: "map"
+
+  pcl_preprocessing_costmap:
+    pcl_preprocessing_costmap:
+      ros__parameters:
+        global_frame: map
+        robot_base_frame: loki_1_odom
+        rolling_window: true
+        width: 15
+        height: 15
+        update_frequency: 1.0
+        resolution: 0.05
+        robot_radius: 0.2413
+        track_unknown_space: True
+        plugins: ["static_layer","inflation_layer","obstacle_layer"]
+        inflation_layer:
+          plugin: "nav2_costmap_2d::InflationLayer"
+          enabled: true
+          inflation_radius: 0.5 #0.1
+          cost_scaling_factor: 5.0
+          inflate_unknown: false
+          inflate_around_unknown: false
+          always_send_full_costmap: false
+        obstacle_layer:
+          plugin: "nav2_costmap_2d::ObstacleLayer"
+          enabled: false
+          observation_sources: livox
+          footprint_clearing_enabled: true
           max_obstacle_height: 2.0
-          obstacle_max_range: 2.0
-          clearing: True
-          marking: True
-          #observation_persistence: 0.0
-          #expected_update_rate: 0.1
-          inf_is_valid: false
-          data_type: "PointCloud2"
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: False
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: livox
-        livox:
-          topic: /pcl_preprocessing_node/filteredPcl
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "PointCloud2"
-      static_layer:
-        plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: true
-        enabled: true
-        subscribe_to_updates: false
-        transform_tolerance: 0.5
+          combination_method: 1
+          livox:
+            topic: pcl_preprocessing_node/filteredPcl #/livox/lidar
+            max_obstacle_height: 2.0
+            obstacle_max_range: 2.0
+            clearing: True
+            marking: True
+            #observation_persistence: 0.0
+            #expected_update_rate: 0.1
+            inf_is_valid: false
+            data_type: "PointCloud2"
+        static_layer:
+          plugin: "nav2_costmap_2d::StaticLayer"
+          map_subscribe_transient_local: true
+          enabled: True
+          subscribe_to_updates: false
+          transform_tolerance: 0.5
+          map_topic: "/map"
