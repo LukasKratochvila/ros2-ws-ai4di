@@ -23,13 +23,12 @@ def generate_launch_description():
     #    'debug',
     #    default_value="False",
     #    description='Debugging')
+    #debug = LaunchConfiguration('debug')
 
     declare_robot_name_cmd = DeclareLaunchArgument(
         'robot_name',
         default_value='/loki_1',
         description='Set robot name for all topics. (default: /loki_1)')
-    
-    #debug = LaunchConfiguration('debug')
     robot_name = LaunchConfiguration('robot_name')
         
     param_substitutions = {#"debug": debug,
@@ -59,12 +58,12 @@ def generate_launch_description():
     tf_cloud_to_top_plate = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['0.2','-0.1','0','0','0','0','loki_1_top_plate_link','cloud']
+        arguments=['0.22','0','0.5','0','0','0','loki_1_top_plate_link','cloud']
         )
     tf_image_to_cloud = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['-0.030','0.045','0','0','{}'.format(-5/180*3.14),'0','cloud','image'])
+        arguments=['-0.05','0.09','0','0','{}'.format(0/180*3.14),'0','cloud','image'])
     tf_for_local_map = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -143,7 +142,8 @@ def generate_launch_description():
         name='map_lookup_node',
         namespace=robot_name,
         parameters=[configured_params],
-        remappings=remappings)
+        remappings=[('/loki_1/tf', '/tf'),
+         ('/loki_1/tf_static', '/tf_static')])
     projection_node = Node(
         package='projection',
         executable='projection',
@@ -239,17 +239,9 @@ def generate_launch_description():
         name='map_server',
         output='screen',
         emulate_tty=True,
-        namespace=robot_name,
         parameters=[configured_params],
         remappings=remappings)
-    map_lifecycle_manager_cmd = Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_map',
-            output='screen',
-            emulate_tty=True,
-            namespace=robot_name,
-            parameters=[configured_params])
+
     lidar_lifecycle_manager_cmd = Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
@@ -301,9 +293,9 @@ def generate_launch_description():
     ld.add_action(viz_3d_matcher)
     #ld.add_action(viz_3d_tracker)
     
-    #ld.add_action(map_server)
     ld.add_action(lidar_lifecycle_manager_cmd)
 
     ld.add_action(rviz)
+    #ld.add_action(map_server)
 
     return ld
