@@ -49,7 +49,8 @@ def generate_launch_description():
         name='pcl_preprocessing_node',
         namespace=robot_name,
         parameters=[configured_params],
-        remappings=remappings)
+        remappings=[('/loki_1/tf', '/tf'),
+         ('/loki_1/tf_static', '/tf_static')])
     clustering_node = Node(
         package='clustering',
         executable='clustering',
