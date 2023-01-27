@@ -1,0 +1,22 @@
+Install ubuntu 20.04 LTS
+Install ROS2 foxy base
+Install Colcon 
+update .bashrc - source, ros-domain-id 0
+Clone repository with subrepositories
+remove COLCON_IGNORE && build packages
+cam - vision-msgs
+lidar - libpcl-dev
+      - cv-bridge, nav2-costmap-2d, pcl-conversions, vision-msgs, nav2-lifecycle-manager
+      - Install LivoxSDK with -fPIC
+      - livox-interfaces, livox-sdk-vendor, livox-driver
+Enable deamons
+
+Install ptplinux setup it
+(enable and start service, edit config - slave, software) 
+disable ntp (timedatectl)
+
+sudo apt install openssh-server
+
+set cyclonedds RMW (ros2 doctor --report)
+Install cycloends
+update .bashrc - export rmw

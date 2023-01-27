@@ -16,6 +16,9 @@ git clone --recurse-submodules https://github.com/LukasKratochvila/ros2-ws-ai4di
 ```
 
 # Building ROS 2 and Colcon
+Install ROS 2: https://docs.ros.org/en/foxy/Installation.html
+If you want to install only "ros-base", you will need install additional packages: cv-bridge, pcl-conversion, nav2-costmap-2d, etc...
+Install Colcon: https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html
 Build should work with ROS 2 Foxy. On constrained devices, it is necessary to build packages one by one.
 ```
 cd ros2-ws-ai4di/
@@ -24,6 +27,9 @@ colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --symlink-install
 source install/setup.bash
 ```
 If you want to use advanced features take look on <a href="https://github.com/LukasKratochvila/ros2-ws-ai4di/blob/main/requirements.txt">requirements<a>.
+
+# Cyclone DDS
+If you want use Cyclone DDS folow: http://docs.ros.org/en/foxy/Installation/DDS-Implementations/Working-with-Eclipse-CycloneDDS.html
 
 # Overview
 <p align="center">
